@@ -1,0 +1,11 @@
+--- src/sjcl/index.d.ts	2021-10-20 01:30:27.519641818 -0700
++++ src/sjcl/index.2	2021-10-20 01:27:40.922007749 -0700
+@@ -1363,6 +1363,8 @@
+     class point {
+         constructor(curve: any, x: any, y: any);
+ 
++        constructor(curve: any);
++
+         isValid(): any;
+ 
+         mult(k: any): any;

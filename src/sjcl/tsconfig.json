@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "declaration": false,
+        "declarationMap": false,
+        "composite": false,
+        "sourceMap": false,
+        "allowJs": true
+    },
+    "extends": "../../tsconfig.json",
+    "files": [
+        "index.js"
+    ]
+}
