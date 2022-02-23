@@ -95,10 +95,11 @@ export class Group {
     public readonly size: number
 
     public hashParams: {
+        // See Section F.2.1.2 at https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#appendix-F.2.1.2
         hash: string
         L: number
         Z: number
-        c2: string
+        c2: string // 2. c2 = sqrt(-Z) in GF(p).
     }
 
     constructor(gid: GroupID) {
@@ -110,7 +111,8 @@ export class Group {
                     hash: 'SHA-256',
                     L: 48,
                     Z: -10,
-                    c2: '0x78bc71a02d89ec07214623f6d0f955072c7cc05604a5a6e23ffbf67115fa5301'
+                    // c2 = sqrt(-Z) in GF(p).
+                    c2: '0x25ac71c31e27646736870398ae7f554d8472e008b3aa2a49d332cbd81bcc3b80'
                 }
                 break
             case GroupID.P384:
@@ -120,7 +122,8 @@ export class Group {
                     hash: 'SHA-384',
                     L: 72,
                     Z: -12,
-                    c2: '0x19877cc1041b7555743c0ae2e3a3e61fb2aaa2e0e87ea557a563d8b598a0940d0a697a9e0b9e92cfaa314f583c9d066'
+                    // c2 = sqrt(-Z) in GF(p).
+                    c2: '0x2accb4a656b0249c71f0500e83da2fdd7f98e383d68b53871f872fcb9ccb80c53c0de1f8a80f7e1914e2ec69f5a626b3'
                 }
                 break
             case GroupID.P521:
@@ -130,7 +133,8 @@ export class Group {
                     hash: 'SHA-512',
                     L: 98,
                     Z: -4,
-                    c2: '0x8'
+                    // c2 = sqrt(-Z) in GF(p).
+                    c2: '0x2'
                 }
                 break
             default:
@@ -339,7 +343,7 @@ export class Group {
         const u = await this.hashToField(msg, dst, 2)
         const Q0 = this.sswu(u[0])
         const Q1 = this.sswu(u[1])
-        return Q0.toJac().add(Q1).toAffine() as Elt
+        return Q0.add(Q1.toAffine()).toAffine() as Elt
     }
 
     private async hashToField(
@@ -359,14 +363,17 @@ export class Group {
         return u
     }
 
-    private sswu(u: FieldElt): Elt {
+    private sswu(u: FieldElt): sjcl.ecc.pointJac {
+        // Simplified SWU method.
+        // Appendix F.2 of draft-irtf-cfrg-hash-to-curve-14
+        // https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#appendix-F.2
         const {
             a: A,
             b: B,
             field: { modulus: p }
         } = this.curve
         const Z = new this.curve.field(this.hashParams.Z)
-        const c2 = new sjcl.bn(this.hashParams.c2)
+        const c2 = new this.curve.field(this.hashParams.c2) // c2 = sqrt(-Z)
         const c1 = p.sub(new sjcl.bn(3)).halveM().halveM() // c1 = (p-3)/4
         const zero = new this.curve.field(0)
         const one = new this.curve.field(1)
@@ -378,50 +385,58 @@ export class Group {
         function cmov(x: FieldElt, y: FieldElt, b: boolean): FieldElt {
             return b ? y : x
         }
+        // Input: u and v, elements of F, where v != 0.
+        // Output: (isQR, root), where
+        //   isQR = True  and root = sqrt(u / v) if (u / v) is square in F, and
+        //   isQR = False and root = sqrt(Z * (u / v)) otherwise.
+        function sqrt_ratio_3mod4(u: FieldElt, v: FieldElt): { isQR: boolean; root: FieldElt } {
+            let tv1 = v.square() //         1. tv1 = v^2
+            const tv2 = u.mul(v) //         2. tv2 = u * v
+            tv1 = tv1.mul(tv2) //           3. tv1 = tv1 * tv2
+            let y1 = tv1.power(c1) //       4. y1 = tv1^c1
+            y1 = y1.mul(tv2) //             5. y1 = y1 * tv2
+            const y2 = y1.mul(c2) //        6. y2 = y1 * c2
+            let tv3 = y1.square() //        7. tv3 = y1^2
+            tv3 = tv3.mul(v) //             8. tv3 = tv3 * v
+            const isQR = tv3.equals(u) //   9. isQR = tv3 == u
+            const y = cmov(y2, y1, isQR) // 10. y = CMOV(y2, y1, isQR)
+            return { isQR, root: y } //     11. return (isQR, y)
+        }
 
-        let tv1 = u.square() //          1. tv1 = u^2
-        const tv3 = Z.mul(tv1) //        2. tv3 = Z * tv1
-        let tv2 = tv3.square() //       3. tv2 = tv3^2
-        let xd = tv2.add(tv3) //        4.  xd = tv2 + tv3
-        let x1n = xd.add(one) //         5. x1n = xd + 1
-        x1n = x1n.mul(B) //              6. x1n = x1n * B
-        let tv4 = p.sub(A)
-        xd = xd.mul(tv4) //              7.  xd = -A * xd
-        const e1 = xd.equals(zero) //    8.  e1 = xd == 0
-        tv4 = A.mul(Z)
-        xd = cmov(xd, tv4, e1) //        9.  xd = CMOV(xd, Z * A, e1)
-        tv2 = xd.square() //            10. tv2 = xd^2
-        const gxd = tv2.mul(xd) //      11. gxd = tv2 * xd
-        tv2 = tv2.mul(A) //             12. tv2 = A * tv2
-        let gx1 = x1n.square() //       13. gx1 = x1n^2
-        gx1 = gx1.add(tv2) //           14. gx1 = gx1 + tv2
-        gx1 = gx1.mul(x1n) //           15. gx1 = gx1 * x1n
-        tv2 = gxd.mul(B) //             16. tv2 = B * gxd
-        gx1 = gx1.add(tv2) //           17. gx1 = gx1 + tv2
-        tv4 = gxd.square() //           18. tv4 = gxd^2
-        tv2 = gx1.mul(gxd) //           19. tv2 = gx1 * gxd
-        tv4 = tv4.mul(tv2) //           20. tv4 = tv4 * tv2
-        let y1 = tv4.power(c1) //       21.  y1 = tv4^c1
-        y1 = y1.mul(tv2) //             22.  y1 = y1 * tv2
-        const x2n = tv3.mul(x1n) //     23. x2n = tv3 * x1n
-        let y2 = y1.mul(c2) //          24.  y2 = y1 * c2
-        y2 = y2.mul(tv1) //             25.  y2 = y2 * tv1
-        y2 = y2.mul(u) //               26.  y2 = y2 * u
-        tv2 = y1.square() //            27. tv2 = y1^2
-        tv2 = tv2.mul(gxd) //           28. tv2 = tv2 * gxd
-        const e2 = tv2.equals(gx1) //  29.  e2 = tv2 == gx1
-        const xn = cmov(x2n, x1n, e2) //  30.  xn = CMOV(x2n, x1n, e2)
-        let y = cmov(y2, y1, e2) //     31.   y = CMOV(y2, y1, e2)
-        const e3 = sgn(u) === sgn(y) // 32.  e3 = sgn0(u) == sgn0(y)
-        tv1 = p.sub(y)
-        y = cmov(tv1, y, e3) //         33.   y = CMOV(-y, y, e3)
-        let x = xd.inverseMod(p) //     34. return (xn, xd, y, 1)
-        x = xn.mul(x)
+        let tv1 = u.square() //         1.  tv1 = u^2
+        tv1 = Z.mul(tv1) //             2.  tv1 = Z * tv1
+        let tv2 = tv1.square() //       3.  tv2 = tv1^2
+        tv2 = tv2.add(tv1) //           4.  tv2 = tv2 + tv1
+        let tv3 = tv2.add(one) //       5.  tv3 = tv2 + 1
+        tv3 = B.mul(tv3) //             6.  tv3 = B * tv3
+        let tv4 = cmov(Z, zero.sub(tv2), !tv2.equals(zero)) // 7.  tv4 = CMOV(Z, -tv2, tv2 != 0)
+        tv4 = A.mul(tv4) //             8.  tv4 = A * tv4
+        tv2 = tv3.square() //           9.  tv2 = tv3^2
+        let tv6 = tv4.square() //       10. tv6 = tv4^2
+        let tv5 = A.mul(tv6) //         11. tv5 = A * tv6
+        tv2 = tv2.add(tv5) //           12. tv2 = tv2 + tv5
+        tv2 = tv2.mul(tv3) //           13. tv2 = tv2 * tv3
+        tv6 = tv6.mul(tv4) //           14. tv6 = tv6 * tv4
+        tv5 = B.mul(tv6) //             15. tv5 = B * tv6
+        tv2 = tv2.add(tv5) //           16. tv2 = tv2 + tv5
+        let x = tv1.mul(tv3) //         17.   x = tv1 * tv3
+        const { isQR, root: y1 } = sqrt_ratio_3mod4(tv2, tv6) // 18. (is_gx1_square, y1) = sqrt_ratio(tv2, tv6)
+        let y = tv1.mul(u) //           19.   y = tv1 * u
+        y = y.mul(y1) //                20.   y = y * y1
+        x = cmov(x, tv3, isQR) //       21.   x = CMOV(x, tv3, is_gx1_square)
+        y = cmov(y, y1, isQR) //        22.   y = CMOV(y, y1, is_gx1_square)
+        const e1 = sgn(u) === sgn(y) // 23.  e1 = sgn0(u) == sgn0(y)
+        y = cmov(zero.sub(y), y, e1) // 24.   y = CMOV(-y, y, e1)
+        const z = tv4 //                25.   x = x / tv4
+        x = x.mul(z) //                 26. return (x, y, z)
+        tv1 = z.square()
+        tv1 = tv1.mul(z)
+        y = y.mul(tv1)
 
-        const point = new sjcl.ecc.point(this.curve, new sjcl.bn(x), new sjcl.bn(y))
+        const point = new sjcl.ecc.pointJac(this.curve, x, y, z)
         if (!point.isValid()) {
             throw new Error('point not in curve')
         }
-        return point as Elt
+        return point
     }
 }
