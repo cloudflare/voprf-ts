@@ -5,6 +5,7 @@
 
 import { Oprf, OprfID } from './oprf.js'
 import { SerializedElt, SerializedScalar } from './group.js'
+import { joinAll, to16bits } from './util.js'
 
 export function getKeySizes(id: OprfID): { Nsk: number; Npk: number } {
     const { gg } = Oprf.params(id)
@@ -37,9 +38,25 @@ export async function randomPrivateKey(id: OprfID): Promise<Uint8Array> {
     return new Uint8Array(gg.serializeScalar(priv))
 }
 
-export async function derivePrivateKey(id: OprfID, seed: Uint8Array): Promise<Uint8Array> {
+export async function derivePrivateKey(
+    id: OprfID,
+    seed: Uint8Array,
+    info: Uint8Array
+): Promise<Uint8Array> {
     const { gg } = Oprf.params(id),
-        priv = await gg.hashToScalar(seed, Oprf.getHashToScalarDST(id))
+        deriveInput = joinAll([seed, to16bits(info.length), info])
+    let counter = 0,
+        priv
+
+    do {
+        if (counter > 255) {
+            throw new Error('DeriveKeyPairError')
+        }
+        const hashInput = joinAll([deriveInput, Uint8Array.from([counter])])
+        priv = await gg.hashToScalar(hashInput, Oprf.getDeriveKeyPairDST(id))
+        counter++
+    } while (gg.isScalarZero(priv))
+
     return new Uint8Array(gg.serializeScalar(priv))
 }
 
@@ -60,9 +77,10 @@ export async function generateKeyPair(
 
 export async function deriveKeyPair(
     id: OprfID,
-    seed: Uint8Array
+    seed: Uint8Array,
+    info: Uint8Array
 ): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array }> {
-    const privateKey = await derivePrivateKey(id, seed),
+    const privateKey = await derivePrivateKey(id, seed, info),
         publicKey = generatePublicKey(id, privateKey)
     return { privateKey, publicKey }
 }

@@ -142,6 +142,10 @@ export class Group {
         return new sjcl.ecc.point(this.curve) as Elt
     }
 
+    isIdentity(e: Elt): boolean {
+        return e.isIdentity
+    }
+
     generator(): Elt {
         return this.curve.G as Elt
     }
@@ -257,6 +261,10 @@ export class Group {
 
     invScalar(k: Scalar): Scalar {
         return k.inverseMod(this.curve.r)
+    }
+
+    isScalarZero(k: Scalar): boolean {
+        return k.equals(0)
     }
 
     static mul(k: Scalar, e: Elt): Elt {

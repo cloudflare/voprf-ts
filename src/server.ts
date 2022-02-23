@@ -18,29 +18,17 @@ export class OPRFServer extends Oprf {
         this.privateKey = privateKey
     }
 
-    async evaluate(blindedElement: Blinded, info: Uint8Array): Promise<Evaluation> {
-        const context = Oprf.getEvalContext(this.params.id, info),
-            dst = Oprf.getHashToScalarDST(this.params.id),
-            m = await this.params.gg.hashToScalar(context, dst),
-            serSk = new SerializedScalar(this.privateKey),
-            sk = this.params.gg.deserializeScalar(serSk),
-            t = this.params.gg.addScalar(sk, m),
-            tInv = this.params.gg.invScalar(t)
-
+    evaluate(blindedElement: Blinded): Promise<Evaluation> {
         if (this.supportsWebCryptoOPRF) {
-            const serTInv = this.params.gg.serializeScalar(tInv)
-            return this.evaluateWebCrypto(blindedElement, serTInv)
+            return this.evaluateWebCrypto(blindedElement)
         }
-        return Promise.resolve(this.evaluateSJCL(blindedElement, tInv))
+        return Promise.resolve(this.evaluateSJCL(blindedElement))
     }
 
-    private async evaluateWebCrypto(
-        blindedElement: Blinded,
-        secret: Uint8Array
-    ): Promise<Evaluation> {
+    private async evaluateWebCrypto(blindedElement: Blinded): Promise<Evaluation> {
         const key = await crypto.subtle.importKey(
             'raw',
-            secret,
+            this.privateKey,
             {
                 name: 'OPRF',
                 namedCurve: this.params.gg.id
@@ -58,27 +46,25 @@ export class OPRFServer extends Oprf {
         return new Evaluation(evaluation)
     }
 
-    private evaluateSJCL(blindedElement: Blinded, secret: unknown): Evaluation {
+    private evaluateSJCL(blindedElement: Blinded): Evaluation {
         const P = this.params.gg.deserialize(blindedElement),
-            Z = Group.mul(secret, P)
+            serSk = new SerializedScalar(this.privateKey),
+            sk = this.params.gg.deserializeScalar(serSk),
+            Z = Group.mul(sk, P)
         return new Evaluation(this.params.gg.serialize(Z))
     }
 
-    async fullEvaluate(input: Uint8Array, info: Uint8Array): Promise<Uint8Array> {
+    async fullEvaluate(input: Uint8Array): Promise<Uint8Array> {
         const dst = Oprf.getHashToGroupDST(this.params.id),
             T = await this.params.gg.hashToGroup(input, dst),
             issuedElement = new Blinded(this.params.gg.serialize(T)),
-            evaluation = await this.evaluate(issuedElement, info),
-            digest = await this.coreFinalize(input, info, evaluation)
+            evaluation = await this.evaluate(issuedElement),
+            digest = await this.coreFinalize(input, evaluation)
         return digest
     }
 
-    async verifyFinalize(
-        input: Uint8Array,
-        output: Uint8Array,
-        info: Uint8Array
-    ): Promise<boolean> {
-        const digest = await this.fullEvaluate(input, info)
+    async verifyFinalize(input: Uint8Array, output: Uint8Array): Promise<boolean> {
+        const digest = await this.fullEvaluate(input)
         return ctEqual(output, digest)
     }
 }

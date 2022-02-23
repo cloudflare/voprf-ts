@@ -14,7 +14,7 @@ Available at: [@cloudflare/voprf-ts](https://www.npmjs.com/package/@cloudflare/v
 
 ### Specification
 
-IETF draft [VOPRF v08](https://tools.ietf.org/html/draft-irtf-cfrg-voprf-08)
+IETF draft [VOPRF v09](https://tools.ietf.org/html/draft-irtf-cfrg-voprf-09)
 
 ### Test and Coverage
 

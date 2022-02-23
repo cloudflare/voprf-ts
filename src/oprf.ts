@@ -35,7 +35,7 @@ export interface OprfParams {
 export abstract class Oprf {
     static readonly mode = 0
 
-    static readonly version = 'VOPRF08-'
+    static readonly version = 'VOPRF09-'
 
     readonly params: OprfParams
 
@@ -96,34 +96,21 @@ export abstract class Oprf {
         return joinAll([new TextEncoder().encode('HashToScalar-'), Oprf.getContextString(id)])
     }
 
-    static getEvalContext(id: OprfID, info: Uint8Array): Uint8Array {
-        return joinAll([
-            new TextEncoder().encode('Context-'),
-            Oprf.getContextString(id),
-            to16bits(info.length),
-            info
-        ])
+    static getDeriveKeyPairDST(id: OprfID): Uint8Array {
+        return joinAll([new TextEncoder().encode('DeriveKeyPair'), Oprf.getContextString(id)])
     }
 
     protected async coreFinalize(
         input: Uint8Array,
-        info: Uint8Array,
         unblindedElement: Uint8Array
     ): Promise<Uint8Array> {
-        const finalizeDST = joinAll([
-                new TextEncoder().encode('Finalize-'),
-                Oprf.getContextString(this.params.id)
-            ]),
-            hashInput = joinAll([
-                to16bits(input.length),
-                input,
-                to16bits(info.length),
-                info,
-                to16bits(unblindedElement.length),
-                unblindedElement,
-                to16bits(finalizeDST.length),
-                finalizeDST
-            ])
+        const hashInput = joinAll([
+            to16bits(input.length),
+            input,
+            to16bits(unblindedElement.length),
+            unblindedElement,
+            new TextEncoder().encode('Finalize')
+        ])
         return new Uint8Array(await crypto.subtle.digest(this.params.hash, hashInput))
     }
 }
