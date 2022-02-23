@@ -17,23 +17,21 @@ export class OPRFClient extends Oprf {
     async blind(input: Uint8Array): Promise<{ blind: Blind; blindedElement: Blinded }> {
         const { scalar, blind } = await this.randomBlinder(),
             dst = Oprf.getHashToGroupDST(this.params.id),
-            P = await this.params.gg.hashToGroup(input, dst),
-            Q = Group.mul(scalar, P),
+            P = await this.params.gg.hashToGroup(input, dst)
+        if (this.params.gg.isIdentity(P)) {
+            throw new Error('InvalidInputError')
+        }
+        const Q = Group.mul(scalar, P),
             blindedElement = new Blinded(this.params.gg.serialize(Q))
         return { blind, blindedElement }
     }
 
-    finalize(
-        input: Uint8Array,
-        info: Uint8Array,
-        blind: Blind,
-        evaluation: Evaluation
-    ): Promise<Uint8Array> {
+    finalize(input: Uint8Array, blind: Blind, evaluation: Evaluation): Promise<Uint8Array> {
         const blindScalar = this.params.gg.deserializeScalar(blind),
             blindScalarInv = this.params.gg.invScalar(blindScalar),
             Z = this.params.gg.deserialize(evaluation),
             N = Group.mul(blindScalarInv, Z),
             unblinded = this.params.gg.serialize(N)
-        return this.coreFinalize(input, info, unblinded)
+        return this.coreFinalize(input, unblinded)
     }
 }

@@ -61,7 +61,6 @@ describe.each([OprfID.OPRF_P256_SHA256, OprfID.OPRF_P384_SHA384, OprfID.OPRF_P52
                 server = new OPRFServer(id, privateKey),
                 client = new OPRFClient(id),
                 input = te.encode('This is the client input'),
-                info = te.encode('This is the shared info'),
                 req = await client.blind(input),
                 { gg } = Oprf.params(id),
                 bt = gg.deserialize(req.blindedElement)
@@ -69,11 +68,11 @@ describe.each([OprfID.OPRF_P256_SHA256, OprfID.OPRF_P384_SHA384, OprfID.OPRF_P52
             for (const compressed of [true, false]) {
                 server.supportsWebCryptoOPRF = false
                 let blinded = new Blinded(gg.serialize(bt, compressed))
-                const ev0 = await server.evaluate(blinded, info) // eslint-disable-line no-await-in-loop
+                const ev0 = await server.evaluate(blinded) // eslint-disable-line no-await-in-loop
 
                 server.supportsWebCryptoOPRF = true
                 blinded = new Blinded(gg.serialize(bt, compressed))
-                const ev1 = await server.evaluate(blinded, info) // eslint-disable-line no-await-in-loop
+                const ev1 = await server.evaluate(blinded) // eslint-disable-line no-await-in-loop
 
                 expect(ev0).toEqual(ev1)
             }

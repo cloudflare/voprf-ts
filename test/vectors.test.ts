@@ -5,7 +5,7 @@
 
 import { Blind, OPRFClient, OPRFServer, Oprf, OprfID, derivePrivateKey } from '../src/index.js'
 
-import allVectors from './testdata/allVectors_v08.json'
+import allVectors from './testdata/allVectors_v09.json'
 import { jest } from '@jest/globals'
 
 function fromHex(x: string): Uint8Array {
@@ -24,7 +24,8 @@ describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]
         describe(`${testVector.suiteName}/Mode${testVector.mode}`, () => {
             it('keygen', async () => {
                 const seed = fromHex(testVector.seed),
-                    skSm = await derivePrivateKey(oprfID, seed)
+                    info = fromHex(testVector.keyInfo),
+                    skSm = await derivePrivateKey(oprfID, seed, info)
                 expect(toHex(skSm)).toBe(testVector.skSm)
             })
 
@@ -45,18 +46,17 @@ describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]
                 })
 
                 const input = fromHex(vi.Input),
-                    info = fromHex(vi.Info),
                     { blind, blindedElement } = await client.blind(input)
                 expect(toHex(blind)).toEqual(vi.Blind)
                 expect(toHex(blindedElement)).toEqual(vi.BlindedElement)
 
-                const evaluation = await server.evaluate(blindedElement, info)
+                const evaluation = await server.evaluate(blindedElement)
                 expect(toHex(evaluation)).toEqual(vi.EvaluationElement)
 
-                const output = await client.finalize(input, info, blind, evaluation)
+                const output = await client.finalize(input, blind, evaluation)
                 expect(toHex(output)).toEqual(vi.Output)
 
-                const serverCheckOutput = await server.verifyFinalize(input, output, info)
+                const serverCheckOutput = await server.verifyFinalize(input, output)
                 expect(serverCheckOutput).toBe(true)
             })
         })

@@ -22,7 +22,6 @@ describe.each([OprfID.OPRF_P256_SHA256, OprfID.OPRF_P384_SHA384, OprfID.OPRF_P52
                 // /////////////////
                 client = new OPRFClient(id),
                 input = te.encode('This is the client input'),
-                info = te.encode('This is the shared info'),
                 // Client
                 { blind, blindedElement } = await client.blind(input),
                 // Client                     Server
@@ -30,21 +29,21 @@ describe.each([OprfID.OPRF_P256_SHA256, OprfID.OPRF_P384_SHA384, OprfID.OPRF_P52
                 //       ------------------>>
 
                 // Server
-                evaluatedElement = await server.evaluate(blindedElement, info),
+                evaluatedElement = await server.evaluate(blindedElement),
                 // Client                     Server
                 //         evaluatedElement
                 //       <<------------------
 
                 // Client
-                output = await client.finalize(input, info, blind, evaluatedElement),
+                output = await client.finalize(input, blind, evaluatedElement),
                 { outLenBytes } = hashParams(Oprf.params(id).hash)
 
             expect(output).toHaveLength(outLenBytes)
 
-            const serverOutput = await server.fullEvaluate(input, info)
+            const serverOutput = await server.fullEvaluate(input)
             expect(output).toStrictEqual(serverOutput)
 
-            const success = await server.verifyFinalize(input, output, info)
+            const success = await server.verifyFinalize(input, output)
             expect(success).toBe(true)
         })
     }

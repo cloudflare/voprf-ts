@@ -65,9 +65,10 @@ describe.each([OprfID.OPRF_P256_SHA256, OprfID.OPRF_P384_SHA384, OprfID.OPRF_P52
             })
 
             it('deriveKeyPair', async () => {
+                const info = new TextEncoder().encode('info used for derivation')
                 for (let i = 0; i < 64; i++) {
                     const seed = crypto.getRandomValues(new Uint8Array(Nsk)),
-                        keys = await deriveKeyPair(id, seed), // eslint-disable-line no-await-in-loop
+                        keys = await deriveKeyPair(id, seed, info), // eslint-disable-line no-await-in-loop
                         sk = validatePrivateKey(id, keys.privateKey),
                         pk = validatePublicKey(id, keys.publicKey)
                     expect(sk).toBe(true)
