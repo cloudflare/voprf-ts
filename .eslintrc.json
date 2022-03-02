@@ -41,14 +41,14 @@
                 "max-lines-per-function": [
                     "warn",
                     {
-                        "max": 50,
+                        "max": 100,
                         "skipComments": true,
                         "skipBlankLines": true
                     }
                 ],
                 "max-statements": [
                     "warn",
-                    25
+                    50
                 ],
                 "max-params": [
                     "warn",
