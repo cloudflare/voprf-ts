@@ -325,9 +325,11 @@ export class Group {
     }
 
     private sswu(u: FieldElt): Elt {
-        const A = this.curve.a
-        const B = this.curve.b
-        const p = this.curve.field.modulus
+        const {
+            a: A,
+            b: B,
+            field: { modulus: p }
+        } = this.curve
         const Z = new this.curve.field(this.hashParams.Z)
         const c2 = new sjcl.bn(this.hashParams.c2)
         const c1 = p.sub(new sjcl.bn(3)).halveM().halveM() // c1 = (p-3)/4
