@@ -4,11 +4,10 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import { Blind, Blinded, Evaluation, Oprf } from './oprf.js'
-
-import { Group } from './group.js'
+import { Group, Scalar } from './group.js'
 
 export class OPRFClient extends Oprf {
-    async randomBlinder(): Promise<{ scalar: unknown; blind: Blind }> {
+    async randomBlinder(): Promise<{ scalar: Scalar; blind: Blind }> {
         const scalar = await this.params.gg.randomScalar()
         const blind = new Blind(this.params.gg.serializeScalar(scalar))
         return { scalar, blind }

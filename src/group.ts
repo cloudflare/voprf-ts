@@ -15,14 +15,10 @@ export class SerializedScalar extends Uint8Array {
     readonly _serializedScalarBrand = ''
 }
 
-// Elt is a sjcl.ecc.point
-type Elt = any
-// Scalar is a sjcl.bn
-type Scalar = any
-// Curve is a sjcl.ecc.curve
-type Curve = any
-// Scalar is a sjcl.bn
-type FieldElt = any
+export type Elt = sjcl.ecc.point
+export type Scalar = sjcl.bn
+export type Curve = sjcl.ecc.curve
+export type FieldElt = sjcl.bn
 
 async function expandXMD(
     hash: string,
@@ -169,11 +165,11 @@ export class Group {
 
     // Serializes an element in compressed form.
     private serComp(e: Elt): SerializedElt {
-        const x = sjcl.codec.arrayBuffer.fromBits(e.x.toBits(), false)
+        const x = sjcl.codec.arrayBuffer.fromBits(e.x.toBits(null), false)
         const bytes = new Uint8Array(x)
         const serElt = new SerializedElt(1 + this.size)
 
-        serElt[0] = 0x02 | (e.y.limbs[0] & 1)
+        serElt[0] = 0x02 | (e.y.getLimb(0) & 1)
         serElt.set(bytes, 1 + this.size - bytes.length)
         return serElt
     }
@@ -338,7 +334,7 @@ export class Group {
 
         function sgn(x: FieldElt): number {
             x.fullReduce()
-            return x.limbs[0] & 1
+            return x.getLimb(0) & 1
         }
         function cmov(x: FieldElt, y: FieldElt, b: boolean): FieldElt {
             return b ? y : x
