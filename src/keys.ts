@@ -14,8 +14,8 @@ export function getKeySizes(id: OprfID): { Nsk: number; Npk: number } {
 
 export function validatePrivateKey(id: OprfID, privateKey: Uint8Array): boolean {
     try {
-        const { gg } = Oprf.params(id),
-            s = gg.deserializeScalar(new SerializedScalar(privateKey))
+        const { gg } = Oprf.params(id)
+        const s = gg.deserializeScalar(new SerializedScalar(privateKey))
         return !s.equals(0)
     } catch (_) {
         return false
@@ -24,8 +24,8 @@ export function validatePrivateKey(id: OprfID, privateKey: Uint8Array): boolean 
 
 export function validatePublicKey(id: OprfID, publicKey: Uint8Array): boolean {
     try {
-        const { gg } = Oprf.params(id),
-            P = gg.deserialize(new SerializedElt(publicKey))
+        const { gg } = Oprf.params(id)
+        const P = gg.deserialize(new SerializedElt(publicKey))
         return !P.isIdentity
     } catch (_) {
         return false
@@ -33,8 +33,8 @@ export function validatePublicKey(id: OprfID, publicKey: Uint8Array): boolean {
 }
 
 export async function randomPrivateKey(id: OprfID): Promise<Uint8Array> {
-    const { gg } = Oprf.params(id),
-        priv = await gg.randomScalar()
+    const { gg } = Oprf.params(id)
+    const priv = await gg.randomScalar()
     return new Uint8Array(gg.serializeScalar(priv))
 }
 
@@ -43,10 +43,10 @@ export async function derivePrivateKey(
     seed: Uint8Array,
     info: Uint8Array
 ): Promise<Uint8Array> {
-    const { gg } = Oprf.params(id),
-        deriveInput = joinAll([seed, to16bits(info.length), info])
-    let counter = 0,
-        priv
+    const { gg } = Oprf.params(id)
+    const deriveInput = joinAll([seed, to16bits(info.length), info])
+    let counter = 0
+    let priv
 
     do {
         if (counter > 255) {
@@ -61,17 +61,17 @@ export async function derivePrivateKey(
 }
 
 export function generatePublicKey(id: OprfID, privateKey: Uint8Array): Uint8Array {
-    const { gg } = Oprf.params(id),
-        priv = gg.deserializeScalar(new SerializedScalar(privateKey)),
-        pub = gg.mulBase(priv)
+    const { gg } = Oprf.params(id)
+    const priv = gg.deserializeScalar(new SerializedScalar(privateKey))
+    const pub = gg.mulBase(priv)
     return new Uint8Array(gg.serialize(pub))
 }
 
 export async function generateKeyPair(
     id: OprfID
 ): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array }> {
-    const privateKey = await randomPrivateKey(id),
-        publicKey = generatePublicKey(id, privateKey)
+    const privateKey = await randomPrivateKey(id)
+    const publicKey = generatePublicKey(id, privateKey)
     return { privateKey, publicKey }
 }
 
@@ -80,7 +80,7 @@ export async function deriveKeyPair(
     seed: Uint8Array,
     info: Uint8Array
 ): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array }> {
-    const privateKey = await derivePrivateKey(id, seed, info),
-        publicKey = generatePublicKey(id, privateKey)
+    const privateKey = await derivePrivateKey(id, seed, info)
+    const publicKey = generatePublicKey(id, privateKey)
     return { privateKey, publicKey }
 }
