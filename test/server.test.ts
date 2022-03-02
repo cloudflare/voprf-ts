@@ -19,16 +19,22 @@ import { jest } from '@jest/globals'
 
 const { sign, importKey } = crypto.subtle
 
+interface CryptoKeyWithBuffer extends CryptoKey {
+    keyData: ArrayBuffer
+}
+
 function mockImportKey(...x: Parameters<typeof importKey>): ReturnType<typeof importKey> {
     const [format, keyData, algorithm, extractable] = x
     if (format === 'raw' && (algorithm as EcKeyImportParams).name === 'OPRF') {
         return Promise.resolve({
             type: 'public',
-            algorithm: { name: (algorithm as EcKeyImportParams).namedCurve },
+            algorithm: {
+                name: (algorithm as EcKeyImportParams).namedCurve
+            },
             usages: ['sign'],
             extractable,
             keyData
-        })
+        } as CryptoKeyWithBuffer)
     }
     throw new Error('bad algorithm')
 }
@@ -38,7 +44,7 @@ function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
     if (algorithm === 'OPRF') {
         const g = new Group(Group.getID((key.algorithm as EcdsaParams).name))
         const P = g.deserialize(new SerializedElt(data as Uint8Array))
-        const serSk = new SerializedScalar((key as any).keyData)
+        const serSk = new SerializedScalar((key as CryptoKeyWithBuffer).keyData)
         const sk = g.deserializeScalar(serSk)
         const Z = Group.mul(sk, P)
         const serZ = g.serialize(Z)
