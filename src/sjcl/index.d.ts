@@ -1354,6 +1354,11 @@ export namespace cipher {
 
 export namespace ecc {
     class curve {
+        field: any
+        r: bn
+        a: any
+        b: any
+        G: point
         constructor(Field: any, r: any, a: any, b: any, x: any, y: any);
 
         fromBits(bits: any): any;
@@ -1361,6 +1366,11 @@ export namespace ecc {
     }
 
     class point {
+        isIdentity: boolean
+        x: bn
+        y: bn
+        curve: curve
+
         constructor(curve: any, x: any, y: any);
 
         constructor(curve: any);

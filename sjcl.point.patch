@@ -1,7 +1,26 @@
---- src/sjcl/index.d.ts	2021-10-20 01:30:27.519641818 -0700
-+++ src/sjcl/index.2	2021-10-20 01:27:40.922007749 -0700
-@@ -1363,6 +1363,8 @@
+--- ./src/sjcl/index.d.ts	2022-03-01 17:49:01.729777922 -0800
++++ ./src/sjcl/index.d.ts.patch	2022-03-01 17:54:57.424457115 -0800
+@@ -1354,6 +1354,11 @@
+ 
+ export namespace ecc {
+     class curve {
++        field: any
++        r: bn
++        a: any
++        b: any
++        G: point
+         constructor(Field: any, r: any, a: any, b: any, x: any, y: any);
+ 
+         fromBits(bits: any): any;
+@@ -1361,8 +1366,15 @@
+     }
+ 
      class point {
++        isIdentity: boolean
++        x: bn
++        y: bn
++        curve: curve
++
          constructor(curve: any, x: any, y: any);
  
 +        constructor(curve: any);
