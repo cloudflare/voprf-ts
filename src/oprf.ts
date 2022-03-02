@@ -56,8 +56,8 @@ export abstract class Oprf {
 
     static params(id: OprfID): OprfParams {
         Oprf.validateID(id)
-        let gid = GroupID.P256,
-            hash = 'SHA-256'
+        let gid = GroupID.P256
+        let hash = 'SHA-256'
         switch (id) {
             case OprfID.OPRF_P256_SHA256:
                 break

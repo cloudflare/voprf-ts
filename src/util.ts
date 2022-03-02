@@ -20,8 +20,8 @@ export function xor(a: Uint8Array, b: Uint8Array): Uint8Array {
     if (a.length !== b.length || a.length === 0) {
         throw new Error('arrays of different length')
     }
-    const n = a.length,
-        c = new Uint8Array(n)
+    const n = a.length
+    const c = new Uint8Array(n)
     for (let i = 0; i < n; i++) {
         c[i as number] = a[i as number] ^ b[i as number]
     }

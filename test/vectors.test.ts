@@ -23,15 +23,15 @@ describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]
     if (testVector.mode === Oprf.mode && oprfID in OprfID) {
         describe(`${testVector.suiteName}/Mode${testVector.mode}`, () => {
             it('keygen', async () => {
-                const seed = fromHex(testVector.seed),
-                    info = fromHex(testVector.keyInfo),
-                    skSm = await derivePrivateKey(oprfID, seed, info)
+                const seed = fromHex(testVector.seed)
+                const info = fromHex(testVector.keyInfo)
+                const skSm = await derivePrivateKey(oprfID, seed, info)
                 expect(toHex(skSm)).toBe(testVector.skSm)
             })
 
-            const server = new OPRFServer(oprfID, fromHex(testVector.skSm)),
-                client = new OPRFClient(oprfID),
-                { vectors } = testVector
+            const server = new OPRFServer(oprfID, fromHex(testVector.skSm))
+            const client = new OPRFClient(oprfID)
+            const { vectors } = testVector
 
             server.supportsWebCryptoOPRF = false
 
@@ -39,14 +39,14 @@ describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]
                 // Creates a mock for OPRFClient.randomBlinder method to
                 // inject the blind value given by the test vector.
                 jest.spyOn(OPRFClient.prototype, 'randomBlinder').mockImplementationOnce(() => {
-                    const blind = new Blind(fromHex(vi.Blind)),
-                        { gg } = Oprf.params(oprfID),
-                        scalar = gg.deserializeScalar(blind)
+                    const blind = new Blind(fromHex(vi.Blind))
+                    const { gg } = Oprf.params(oprfID)
+                    const scalar = gg.deserializeScalar(blind)
                     return Promise.resolve({ scalar, blind })
                 })
 
-                const input = fromHex(vi.Input),
-                    { blind, blindedElement } = await client.blind(input)
+                const input = fromHex(vi.Input)
+                const { blind, blindedElement } = await client.blind(input)
                 expect(toHex(blind)).toEqual(vi.Blind)
                 expect(toHex(blindedElement)).toEqual(vi.BlindedElement)
 

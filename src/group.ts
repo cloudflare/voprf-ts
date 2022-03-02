@@ -30,8 +30,8 @@ async function expandXMD(
     dst: Uint8Array,
     numBytes: number
 ): Promise<Uint8Array> {
-    const { outLenBytes, blockLenBytes } = hashParams(hash),
-        ell = Math.ceil(numBytes / outLenBytes)
+    const { outLenBytes, blockLenBytes } = hashParams(hash)
+    const ell = Math.ceil(numBytes / outLenBytes)
 
     if (ell > 255) {
         throw new Error('too big')
@@ -39,21 +39,21 @@ async function expandXMD(
 
     let dstPrime = dst
     if (dst.length > 255) {
-        const te = new TextEncoder(),
-            input = joinAll([te.encode('H2C-OVERSIZE-DST-'), dst])
+        const te = new TextEncoder()
+        const input = joinAll([te.encode('H2C-OVERSIZE-DST-'), dst])
         dstPrime = new Uint8Array(await crypto.subtle.digest(hash, input))
     }
     dstPrime = joinAll([dstPrime, new Uint8Array([dstPrime.length])])
 
-    const zPad = new Uint8Array(blockLenBytes),
-        libStr = new Uint8Array(2)
+    const zPad = new Uint8Array(blockLenBytes)
+    const libStr = new Uint8Array(2)
     libStr[0] = (numBytes >> 8) & 0xff
     libStr[1] = numBytes & 0xff
-    const b0Input = joinAll([zPad, msg, libStr, new Uint8Array([0]), dstPrime]),
-        b0 = new Uint8Array(await crypto.subtle.digest(hash, b0Input)),
-        b1Input = joinAll([b0, new Uint8Array([1]), dstPrime])
-    let bi = new Uint8Array(await crypto.subtle.digest(hash, b1Input)),
-        pseudo = joinAll([bi])
+    const b0Input = joinAll([zPad, msg, libStr, new Uint8Array([0]), dstPrime])
+    const b0 = new Uint8Array(await crypto.subtle.digest(hash, b0Input))
+    const b1Input = joinAll([b0, new Uint8Array([1]), dstPrime])
+    let bi = new Uint8Array(await crypto.subtle.digest(hash, b1Input))
+    let pseudo = joinAll([bi])
 
     for (let i = 2; i <= ell; i++) {
         const biInput = joinAll([xor(bi, b0), new Uint8Array([i]), dstPrime])
@@ -156,8 +156,8 @@ export class Group {
 
     // Serializes an element in uncompressed form.
     private serUnComp(e: Elt): SerializedElt {
-        const xy = sjcl.codec.arrayBuffer.fromBits(e.toBits(), false),
-            bytes = new Uint8Array(xy)
+        const xy = sjcl.codec.arrayBuffer.fromBits(e.toBits(), false)
+        const bytes = new Uint8Array(xy)
         if (bytes.length !== 2 * this.size) {
             throw new Error('error serializing element')
         }
@@ -169,9 +169,9 @@ export class Group {
 
     // Serializes an element in compressed form.
     private serComp(e: Elt): SerializedElt {
-        const x = sjcl.codec.arrayBuffer.fromBits(e.x.toBits(), false),
-            bytes = new Uint8Array(x),
-            serElt = new SerializedElt(1 + this.size)
+        const x = sjcl.codec.arrayBuffer.fromBits(e.x.toBits(), false)
+        const bytes = new Uint8Array(x)
+        const serElt = new SerializedElt(1 + this.size)
 
         serElt[0] = 0x02 | (e.y.limbs[0] & 1)
         serElt.set(bytes, 1 + this.size - bytes.length)
@@ -189,11 +189,11 @@ export class Group {
 
     // Deserializes an element in compressed form.
     private deserComp(serElt: SerializedElt): Elt {
-        const array = Array.from(serElt.slice(1)),
-            bytes = sjcl.codec.bytes.toBits(array),
-            x = new this.curve.field(sjcl.bn.fromBits(bytes)),
-            p = this.curve.field.modulus,
-            exp = p.add(new sjcl.bn(1)).halveM().halveM()
+        const array = Array.from(serElt.slice(1))
+        const bytes = sjcl.codec.bytes.toBits(array)
+        const x = new this.curve.field(sjcl.bn.fromBits(bytes))
+        const p = this.curve.field.modulus
+        const exp = p.add(new sjcl.bn(1)).halveM().halveM()
         let y = x.square().add(this.curve.a).mul(x).add(this.curve.b).power(exp)
         y.fullReduce()
         if ((serElt[0] & 1) !== (y.limbs[0] & 1)) {
@@ -208,9 +208,9 @@ export class Group {
 
     // Deserializes an element in uncompressed form.
     private deserUnComp(serElt: SerializedElt): Elt {
-        const array = Array.from(serElt.slice(1)),
-            b = sjcl.codec.bytes.toBits(array),
-            point = this.curve.fromBits(b)
+        const array = Array.from(serElt.slice(1))
+        const b = sjcl.codec.bytes.toBits(array)
+        const point = this.curve.fromBits(b)
         point.x.fullReduce()
         point.y.fullReduce()
         return point as Elt
@@ -235,16 +235,16 @@ export class Group {
         const k = s.mod(this.curve.r)
         k.normalize()
 
-        const ab = sjcl.codec.arrayBuffer.fromBits(k.toBits(), false),
-            unpaded = new Uint8Array(ab),
-            serScalar = new SerializedScalar(this.size)
+        const ab = sjcl.codec.arrayBuffer.fromBits(k.toBits(), false)
+        const unpaded = new Uint8Array(ab)
+        const serScalar = new SerializedScalar(this.size)
         serScalar.set(unpaded, this.size - unpaded.length)
         return serScalar
     }
 
     deserializeScalar(serScalar: SerializedScalar): Scalar {
-        const array = Array.from(serScalar),
-            k = sjcl.bn.fromBits(sjcl.codec.bytes.toBits(array))
+        const array = Array.from(serScalar)
+        const k = sjcl.bn.fromBits(sjcl.codec.bytes.toBits(array))
         k.normalize()
         if (k.greaterEquals(this.curve.r)) {
             throw new Error('error deserializing scalar')
@@ -292,18 +292,18 @@ export class Group {
     }
 
     async hashToScalar(msg: Uint8Array, dst: Uint8Array): Promise<Scalar> {
-        const { hash, L } = this.hashParams,
-            bytes = await expandXMD(hash, msg, dst, L),
-            array = Array.from(bytes),
-            bitArr = sjcl.codec.bytes.toBits(array),
-            s = sjcl.bn.fromBits(bitArr).mod(this.curve.r)
+        const { hash, L } = this.hashParams
+        const bytes = await expandXMD(hash, msg, dst, L)
+        const array = Array.from(bytes)
+        const bitArr = sjcl.codec.bytes.toBits(array)
+        const s = sjcl.bn.fromBits(bitArr).mod(this.curve.r)
         return s as Scalar
     }
 
     async hashToGroup(msg: Uint8Array, dst: Uint8Array): Promise<Elt> {
-        const u = await this.hashToField(msg, dst, 2),
-            Q0 = this.sswu(u[0]),
-            Q1 = this.sswu(u[1])
+        const u = await this.hashToField(msg, dst, 2)
+        const Q0 = this.sswu(u[0])
+        const Q1 = this.sswu(u[1])
         return Q0.toJac().add(Q1).toAffine() as Elt
     }
 
@@ -312,27 +312,27 @@ export class Group {
         dst: Uint8Array,
         count: number
     ): Promise<FieldElt[]> {
-        const { hash, L } = this.hashParams,
-            bytes = await expandXMD(hash, msg, dst, count * L),
-            u = new Array<FieldElt>(count)
+        const { hash, L } = this.hashParams
+        const bytes = await expandXMD(hash, msg, dst, count * L)
+        const u = new Array<FieldElt>(count)
         for (let i = 0; i < count; i++) {
-            const j = i * L,
-                array = Array.from(bytes.slice(j, j + L)),
-                bitArr = sjcl.codec.bytes.toBits(array)
+            const j = i * L
+            const array = Array.from(bytes.slice(j, j + L))
+            const bitArr = sjcl.codec.bytes.toBits(array)
             u[i as number] = new this.curve.field(sjcl.bn.fromBits(bitArr))
         }
         return u
     }
 
     private sswu(u: FieldElt): Elt {
-        const A = this.curve.a,
-            B = this.curve.b,
-            p = this.curve.field.modulus,
-            Z = new this.curve.field(this.hashParams.Z),
-            c2 = new sjcl.bn(this.hashParams.c2),
-            c1 = p.sub(new sjcl.bn(3)).halveM().halveM(), // c1 = (p-3)/4
-            zero = new this.curve.field(0),
-            one = new this.curve.field(1)
+        const A = this.curve.a
+        const B = this.curve.b
+        const p = this.curve.field.modulus
+        const Z = new this.curve.field(this.hashParams.Z)
+        const c2 = new sjcl.bn(this.hashParams.c2)
+        const c1 = p.sub(new sjcl.bn(3)).halveM().halveM() // c1 = (p-3)/4
+        const zero = new this.curve.field(0)
+        const one = new this.curve.field(1)
 
         function sgn(x: FieldElt): number {
             x.fullReduce()
@@ -344,9 +344,9 @@ export class Group {
 
         let tv1 = u.square() //          1. tv1 = u^2
         const tv3 = Z.mul(tv1) //        2. tv3 = Z * tv1
-        let tv2 = tv3.square(), //       3. tv2 = tv3^2
-            xd = tv2.add(tv3), //        4.  xd = tv2 + tv3
-            x1n = xd.add(one) //         5. x1n = xd + 1
+        let tv2 = tv3.square() //       3. tv2 = tv3^2
+        let xd = tv2.add(tv3) //        4.  xd = tv2 + tv3
+        let x1n = xd.add(one) //         5. x1n = xd + 1
         x1n = x1n.mul(B) //              6. x1n = x1n * B
         let tv4 = p.sub(A)
         xd = xd.mul(tv4) //              7.  xd = -A * xd
@@ -372,8 +372,8 @@ export class Group {
         y2 = y2.mul(u) //               26.  y2 = y2 * u
         tv2 = y1.square() //            27. tv2 = y1^2
         tv2 = tv2.mul(gxd) //           28. tv2 = tv2 * gxd
-        const e2 = tv2.equals(gx1), //  29.  e2 = tv2 == gx1
-            xn = cmov(x2n, x1n, e2) //  30.  xn = CMOV(x2n, x1n, e2)
+        const e2 = tv2.equals(gx1) //  29.  e2 = tv2 == gx1
+        const xn = cmov(x2n, x1n, e2) //  30.  xn = CMOV(x2n, x1n, e2)
         let y = cmov(y2, y1, e2) //     31.   y = CMOV(y2, y1, e2)
         const e3 = sgn(u) === sgn(y) // 32.  e3 = sgn0(u) == sgn0(y)
         tv1 = p.sub(y)

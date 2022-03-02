@@ -47,19 +47,19 @@ export class OPRFServer extends Oprf {
     }
 
     private evaluateSJCL(blindedElement: Blinded): Evaluation {
-        const P = this.params.gg.deserialize(blindedElement),
-            serSk = new SerializedScalar(this.privateKey),
-            sk = this.params.gg.deserializeScalar(serSk),
-            Z = Group.mul(sk, P)
+        const P = this.params.gg.deserialize(blindedElement)
+        const serSk = new SerializedScalar(this.privateKey)
+        const sk = this.params.gg.deserializeScalar(serSk)
+        const Z = Group.mul(sk, P)
         return new Evaluation(this.params.gg.serialize(Z))
     }
 
     async fullEvaluate(input: Uint8Array): Promise<Uint8Array> {
-        const dst = Oprf.getHashToGroupDST(this.params.id),
-            T = await this.params.gg.hashToGroup(input, dst),
-            issuedElement = new Blinded(this.params.gg.serialize(T)),
-            evaluation = await this.evaluate(issuedElement),
-            digest = await this.coreFinalize(input, evaluation)
+        const dst = Oprf.getHashToGroupDST(this.params.id)
+        const T = await this.params.gg.hashToGroup(input, dst)
+        const issuedElement = new Blinded(this.params.gg.serialize(T))
+        const evaluation = await this.evaluate(issuedElement)
+        const digest = await this.coreFinalize(input, evaluation)
         return digest
     }
 
