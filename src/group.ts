@@ -248,9 +248,26 @@ export class Group {
         return k as Scalar
     }
 
+    equalScalar(a: Scalar, b: Scalar): boolean {
+        return a.equals(b)
+    }
+
     addScalar(a: Scalar, b: Scalar): Scalar {
         const c = a.add(b)
         c.mod(this.curve.r)
+        c.normalize()
+        return c
+    }
+
+    subScalar(a: Scalar, b: Scalar): Scalar {
+        const c = a.sub(b).add(this.curve.r)
+        c.mod(this.curve.r)
+        c.normalize()
+        return c
+    }
+
+    mulScalar(a: Scalar, b: Scalar): Scalar {
+        const c = a.mulmod(b, this.curve.r)
         c.normalize()
         return c
     }
@@ -261,6 +278,10 @@ export class Group {
 
     isScalarZero(k: Scalar): boolean {
         return k.equals(0)
+    }
+
+    static add(e: Elt, f: Elt): Elt {
+        return e.toJac().add(f).toAffine() as Elt
     }
 
     static mul(k: Scalar, e: Elt): Elt {

@@ -4,6 +4,7 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 export * from './group.js'
+export * from './dleq.js'
 export * from './oprf.js'
 export * from './client.js'
 export * from './server.js'
