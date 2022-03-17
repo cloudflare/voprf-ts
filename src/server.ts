@@ -3,68 +3,75 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Blinded, Evaluation, Oprf, OprfID } from './oprf.js'
+import { Blinded, Evaluated, Evaluation, EvaluationRequest, ModeID, Oprf, SuiteID } from './oprf.js'
 import { Group, SerializedScalar } from './group.js'
 
 import { ctEqual } from './util.js'
 
-export class OPRFServer extends Oprf {
+class baseServer extends Oprf {
     private privateKey: Uint8Array
 
     public supportsWebCryptoOPRF = false
 
-    constructor(id: OprfID, privateKey: Uint8Array) {
-        super(id)
+    constructor(mode: ModeID, suite: SuiteID, privateKey: Uint8Array) {
+        super(mode, suite)
         this.privateKey = privateKey
     }
 
-    evaluate(blindedElement: Blinded): Promise<Evaluation> {
+    evaluate(req: EvaluationRequest): Promise<Evaluation> {
         if (this.supportsWebCryptoOPRF) {
-            return this.evaluateWebCrypto(blindedElement)
+            return this.evaluateWebCrypto(req)
         }
-        return Promise.resolve(this.evaluateSJCL(blindedElement))
+        return Promise.resolve(this.evaluateSJCL(req))
     }
 
-    private async evaluateWebCrypto(blindedElement: Blinded): Promise<Evaluation> {
+    private async evaluateWebCrypto(req: EvaluationRequest): Promise<Evaluation> {
         const key = await crypto.subtle.importKey(
             'raw',
             this.privateKey,
             {
                 name: 'OPRF',
-                namedCurve: this.params.gg.id
+                namedCurve: this.gg.id
             },
             true,
             ['sign']
         )
         // webcrypto accepts only compressed points.
-        let compressed = Uint8Array.from(blindedElement)
-        if (blindedElement[0] === 0x04) {
-            const P = this.params.gg.deserialize(blindedElement)
-            compressed = Uint8Array.from(this.params.gg.serialize(P, true))
+        let compressed = Uint8Array.from(req.blinded)
+        if (req.blinded[0] === 0x04) {
+            const P = this.gg.deserialize(req.blinded)
+            compressed = Uint8Array.from(this.gg.serialize(P, true))
         }
         const evaluation = await crypto.subtle.sign('OPRF', key, compressed)
-        return new Evaluation(evaluation)
+        return new Evaluation(new Evaluated(evaluation))
     }
 
-    private evaluateSJCL(blindedElement: Blinded): Evaluation {
-        const P = this.params.gg.deserialize(blindedElement)
+    private evaluateSJCL(req: EvaluationRequest): Evaluation {
+        const P = this.gg.deserialize(req.blinded)
         const serSk = new SerializedScalar(this.privateKey)
-        const sk = this.params.gg.deserializeScalar(serSk)
+        const sk = this.gg.deserializeScalar(serSk)
         const Z = Group.mul(sk, P)
-        return new Evaluation(this.params.gg.serialize(Z))
+        return new Evaluation(new Evaluated(this.gg.serialize(Z)))
     }
 
     async fullEvaluate(input: Uint8Array): Promise<Uint8Array> {
-        const dst = Oprf.getHashToGroupDST(this.params.id)
-        const T = await this.params.gg.hashToGroup(input, dst)
-        const issuedElement = new Blinded(this.params.gg.serialize(T))
+        const dst = this.getDST(Oprf.LABELS.HashToGroupDST)
+        const P = await this.gg.hashToGroup(input, dst)
+        if (this.gg.isIdentity(P)) {
+            throw new Error('InvalidInputError')
+        }
+        const issuedElement = new EvaluationRequest(new Blinded(this.gg.serialize(P)))
         const evaluation = await this.evaluate(issuedElement)
-        const digest = await this.coreFinalize(input, evaluation)
-        return digest
+        return this.coreFinalize(input, evaluation.element)
     }
 
     async verifyFinalize(input: Uint8Array, output: Uint8Array): Promise<boolean> {
-        const digest = await this.fullEvaluate(input)
-        return ctEqual(output, digest)
+        return ctEqual(output, await this.fullEvaluate(input))
+    }
+}
+
+export class OPRFServer extends baseServer {
+    constructor(suite: SuiteID, privateKey: Uint8Array) {
+        super(Oprf.Mode.OPRF, suite, privateKey)
     }
 }

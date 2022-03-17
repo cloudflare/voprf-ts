@@ -46,21 +46,3 @@ export function to16bits(n: number): Uint8Array {
     }
     return new Uint8Array([(n >> 8) & 0xff, n & 0xff])
 }
-
-export function hashParams(hash: string): {
-    outLenBytes: number // returns the size in bytes of the output.
-    blockLenBytes: number // returns the size of the internal block.
-} {
-    switch (hash) {
-        case 'SHA-1':
-            return { outLenBytes: 20, blockLenBytes: 64 }
-        case 'SHA-256':
-            return { outLenBytes: 32, blockLenBytes: 64 }
-        case 'SHA-384':
-            return { outLenBytes: 48, blockLenBytes: 128 }
-        case 'SHA-512':
-            return { outLenBytes: 64, blockLenBytes: 128 }
-        default:
-            throw new Error(`invalid hash name: ${hash}`)
-    }
-}

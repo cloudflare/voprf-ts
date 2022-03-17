@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { hashParams, joinAll, xor } from './util.js'
+import { joinAll, xor } from './util.js'
 
 import sjcl from './sjcl/index.js'
 
@@ -19,6 +19,24 @@ export type Elt = sjcl.ecc.point
 export type Scalar = sjcl.bn
 export type Curve = sjcl.ecc.curve
 export type FieldElt = sjcl.bn
+
+function hashParams(hash: string): {
+    outLenBytes: number // returns the size in bytes of the output.
+    blockLenBytes: number // returns the size of the internal block.
+} {
+    switch (hash) {
+        case 'SHA-1':
+            return { outLenBytes: 20, blockLenBytes: 64 }
+        case 'SHA-256':
+            return { outLenBytes: 32, blockLenBytes: 64 }
+        case 'SHA-384':
+            return { outLenBytes: 48, blockLenBytes: 128 }
+        case 'SHA-512':
+            return { outLenBytes: 64, blockLenBytes: 128 }
+        default:
+            throw new Error(`invalid hash name: ${hash}`)
+    }
+}
 
 async function expandXMD(
     hash: string,

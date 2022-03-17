@@ -3,34 +3,54 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Blind, Blinded, Evaluation, Oprf } from './oprf.js'
+import {
+    Blind,
+    Blinded,
+    Evaluation,
+    EvaluationRequest,
+    FinalizeData,
+    ModeID,
+    Oprf,
+    SuiteID
+} from './oprf.js'
 import { Group, Scalar } from './group.js'
 
-export class OPRFClient extends Oprf {
+class baseClient extends Oprf {
+    constructor(mode: ModeID, suite: SuiteID) {
+        super(mode, suite)
+    }
+
     async randomBlinder(): Promise<{ scalar: Scalar; blind: Blind }> {
-        const scalar = await this.params.gg.randomScalar()
-        const blind = new Blind(this.params.gg.serializeScalar(scalar))
+        const scalar = await this.gg.randomScalar()
+        const blind = new Blind(this.gg.serializeScalar(scalar))
         return { scalar, blind }
     }
 
-    async blind(input: Uint8Array): Promise<{ blind: Blind; blindedElement: Blinded }> {
+    async blind(input: Uint8Array): Promise<[FinalizeData, EvaluationRequest]> {
         const { scalar, blind } = await this.randomBlinder()
-        const dst = Oprf.getHashToGroupDST(this.params.id)
-        const P = await this.params.gg.hashToGroup(input, dst)
-        if (this.params.gg.isIdentity(P)) {
+        const dst = this.getDST(Oprf.LABELS.HashToGroupDST)
+        const P = await this.gg.hashToGroup(input, dst)
+        if (this.gg.isIdentity(P)) {
             throw new Error('InvalidInputError')
         }
         const Q = Group.mul(scalar, P)
-        const blindedElement = new Blinded(this.params.gg.serialize(Q))
-        return { blind, blindedElement }
+        const evalReq = new EvaluationRequest(new Blinded(this.gg.serialize(Q)))
+        const finData = new FinalizeData(input, blind, evalReq)
+        return [finData, evalReq]
     }
 
-    finalize(input: Uint8Array, blind: Blind, evaluation: Evaluation): Promise<Uint8Array> {
-        const blindScalar = this.params.gg.deserializeScalar(blind)
-        const blindScalarInv = this.params.gg.invScalar(blindScalar)
-        const Z = this.params.gg.deserialize(evaluation)
+    finalize(finData: FinalizeData, evaluation: Evaluation): Promise<Uint8Array> {
+        const blindScalar = this.gg.deserializeScalar(finData.blind)
+        const blindScalarInv = this.gg.invScalar(blindScalar)
+        const Z = this.gg.deserialize(evaluation.element)
         const N = Group.mul(blindScalarInv, Z)
-        const unblinded = this.params.gg.serialize(N)
-        return this.coreFinalize(input, unblinded)
+        const unblinded = this.gg.serialize(N)
+        return this.coreFinalize(finData.input, unblinded)
+    }
+}
+
+export class OPRFClient extends baseClient {
+    constructor(suite: SuiteID) {
+        super(Oprf.Mode.OPRF, suite)
     }
 }

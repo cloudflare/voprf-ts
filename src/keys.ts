@@ -3,18 +3,18 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Oprf, OprfID } from './oprf.js'
-import { SerializedElt, SerializedScalar } from './group.js'
+import { ModeID, Oprf, SuiteID } from './oprf.js'
+import { Scalar, SerializedElt, SerializedScalar } from './group.js'
 import { joinAll, to16bits } from './util.js'
 
-export function getKeySizes(id: OprfID): { Nsk: number; Npk: number } {
-    const { gg } = Oprf.params(id)
+export function getKeySizes(id: SuiteID): { Nsk: number; Npk: number } {
+    const gg = Oprf.getGroup(id)
     return { Nsk: gg.size, Npk: 1 + gg.size }
 }
 
-export function validatePrivateKey(id: OprfID, privateKey: Uint8Array): boolean {
+export function validatePrivateKey(id: SuiteID, privateKey: Uint8Array): boolean {
     try {
-        const { gg } = Oprf.params(id)
+        const gg = Oprf.getGroup(id)
         const s = gg.deserializeScalar(new SerializedScalar(privateKey))
         return !s.equals(0)
     } catch (_) {
@@ -22,9 +22,9 @@ export function validatePrivateKey(id: OprfID, privateKey: Uint8Array): boolean 
     }
 }
 
-export function validatePublicKey(id: OprfID, publicKey: Uint8Array): boolean {
+export function validatePublicKey(id: SuiteID, publicKey: Uint8Array): boolean {
     try {
-        const { gg } = Oprf.params(id)
+        const gg = Oprf.getGroup(id)
         const P = gg.deserialize(new SerializedElt(publicKey))
         return !P.isIdentity
     } catch (_) {
@@ -32,43 +32,44 @@ export function validatePublicKey(id: OprfID, publicKey: Uint8Array): boolean {
     }
 }
 
-export async function randomPrivateKey(id: OprfID): Promise<Uint8Array> {
-    const { gg } = Oprf.params(id)
+export async function randomPrivateKey(id: SuiteID): Promise<Uint8Array> {
+    const gg = Oprf.getGroup(id)
     const priv = await gg.randomScalar()
     return new Uint8Array(gg.serializeScalar(priv))
 }
 
 export async function derivePrivateKey(
-    id: OprfID,
+    mode: ModeID,
+    id: SuiteID,
     seed: Uint8Array,
     info: Uint8Array
 ): Promise<Uint8Array> {
-    const { gg } = Oprf.params(id)
+    const gg = Oprf.getGroup(id)
     const deriveInput = joinAll([seed, to16bits(info.length), info])
     let counter = 0
-    let priv
+    let priv: Scalar
 
     do {
         if (counter > 255) {
             throw new Error('DeriveKeyPairError')
         }
         const hashInput = joinAll([deriveInput, Uint8Array.from([counter])])
-        priv = await gg.hashToScalar(hashInput, Oprf.getDeriveKeyPairDST(id))
+        priv = await gg.hashToScalar(hashInput, Oprf.getDST(mode, id, Oprf.LABELS.DeriveKeyPairDST))
         counter++
     } while (gg.isScalarZero(priv))
 
     return new Uint8Array(gg.serializeScalar(priv))
 }
 
-export function generatePublicKey(id: OprfID, privateKey: Uint8Array): Uint8Array {
-    const { gg } = Oprf.params(id)
+export function generatePublicKey(id: SuiteID, privateKey: Uint8Array): Uint8Array {
+    const gg = Oprf.getGroup(id)
     const priv = gg.deserializeScalar(new SerializedScalar(privateKey))
     const pub = gg.mulBase(priv)
     return new Uint8Array(gg.serialize(pub))
 }
 
 export async function generateKeyPair(
-    id: OprfID
+    id: SuiteID
 ): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array }> {
     const privateKey = await randomPrivateKey(id)
     const publicKey = generatePublicKey(id, privateKey)
@@ -76,11 +77,12 @@ export async function generateKeyPair(
 }
 
 export async function deriveKeyPair(
-    id: OprfID,
+    mode: ModeID,
+    id: SuiteID,
     seed: Uint8Array,
     info: Uint8Array
 ): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array }> {
-    const privateKey = await derivePrivateKey(id, seed, info)
+    const privateKey = await derivePrivateKey(mode, id, seed, info)
     const publicKey = generatePublicKey(id, privateKey)
     return { privateKey, publicKey }
 }

@@ -4,12 +4,10 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import {
-    Blinded,
     Group,
     OPRFClient,
     OPRFServer,
     Oprf,
-    OprfID,
     SerializedElt,
     SerializedScalar,
     randomPrivateKey
@@ -53,35 +51,26 @@ function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
     throw new Error('bad algorithm')
 }
 
-describe.each([OprfID.OPRF_P256_SHA256, OprfID.OPRF_P384_SHA384, OprfID.OPRF_P521_SHA512])(
-    'supportsWebCrypto',
-    (id: OprfID) => {
-        beforeAll(() => {
-            jest.spyOn(crypto.subtle, 'importKey').mockImplementation(mockImportKey)
-            jest.spyOn(crypto.subtle, 'sign').mockImplementation(mockSign)
-        })
+describe.each(Object.entries(Oprf.Suite))('supportsWebCrypto', (name, id) => {
+    beforeAll(() => {
+        jest.spyOn(crypto.subtle, 'importKey').mockImplementation(mockImportKey)
+        jest.spyOn(crypto.subtle, 'sign').mockImplementation(mockSign)
+    })
 
-        it(`${OprfID[id as number]}`, async () => {
-            const te = new TextEncoder()
-            const privateKey = await randomPrivateKey(id)
-            const server = new OPRFServer(id, privateKey)
-            const client = new OPRFClient(id)
-            const input = te.encode('This is the client input')
-            const req = await client.blind(input)
-            const { gg } = Oprf.params(id)
-            const bt = gg.deserialize(req.blindedElement)
+    it(`${name}`, async () => {
+        const te = new TextEncoder()
+        const privateKey = await randomPrivateKey(id)
+        const server = new OPRFServer(id, privateKey)
+        const client = new OPRFClient(id)
+        const input = te.encode('This is the client input')
+        const [, reqEval] = await client.blind(input)
 
-            for (const compressed of [true, false]) {
-                server.supportsWebCryptoOPRF = false
-                let blinded = new Blinded(gg.serialize(bt, compressed))
-                const ev0 = await server.evaluate(blinded) // eslint-disable-line no-await-in-loop
+        server.supportsWebCryptoOPRF = false
+        const ev0 = await server.evaluate(reqEval)
 
-                server.supportsWebCryptoOPRF = true
-                blinded = new Blinded(gg.serialize(bt, compressed))
-                const ev1 = await server.evaluate(blinded) // eslint-disable-line no-await-in-loop
+        server.supportsWebCryptoOPRF = true
+        const ev1 = await server.evaluate(reqEval)
 
-                expect(ev0).toEqual(ev1)
-            }
-        })
-    }
-)
+        expect(ev0).toEqual(ev1)
+    })
+})
