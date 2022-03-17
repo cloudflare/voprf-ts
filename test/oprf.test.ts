@@ -3,48 +3,41 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { OPRFClient, OPRFServer, Oprf, OprfID, randomPrivateKey } from '../src/index.js'
+import { OPRFClient, OPRFServer, Oprf, randomPrivateKey } from '../src/index.js'
 
-import { hashParams } from '../src/util.js'
+describe.each(Object.entries(Oprf.Suite))('oprf-workflow', (name, id) => {
+    it(`${name}`, async () => {
+        const te = new TextEncoder()
+        // /////////////////
+        // Setup Server
+        // /////////////////
+        const privateKey = await randomPrivateKey(id)
+        const server = new OPRFServer(id, privateKey)
+        // /////////////////
+        // Setup Client
+        // /////////////////
+        const client = new OPRFClient(id)
+        const input = te.encode('This is the client input')
+        // Client
+        const [finData, evalReq] = await client.blind(input)
+        // Client                     Server
+        //             evalReq
+        //       ------------------>>
 
-describe.each([OprfID.OPRF_P256_SHA256, OprfID.OPRF_P384_SHA384, OprfID.OPRF_P521_SHA512])(
-    'oprf-workflow',
-    (id: OprfID) => {
-        it(`${OprfID[id as number]}`, async () => {
-            const te = new TextEncoder()
-            // /////////////////
-            // Setup Server
-            // /////////////////
-            const privateKey = await randomPrivateKey(id)
-            const server = new OPRFServer(id, privateKey)
-            // /////////////////
-            // Setup Client
-            // /////////////////
-            const client = new OPRFClient(id)
-            const input = te.encode('This is the client input')
-            // Client
-            const { blind, blindedElement } = await client.blind(input)
-            // Client                     Server
-            //          blindedElement
-            //       ------------------>>
+        // Server
+        const evaluation = await server.evaluate(evalReq)
+        // Client                     Server
+        //            evaluation
+        //       <<------------------
 
-            // Server
-            const evaluatedElement = await server.evaluate(blindedElement)
-            // Client                     Server
-            //         evaluatedElement
-            //       <<------------------
+        // Client
+        const output = await client.finalize(finData, evaluation)
+        expect(output).toHaveLength(Oprf.getOprfSize(id))
 
-            // Client
-            const output = await client.finalize(input, blind, evaluatedElement)
-            const { outLenBytes } = hashParams(Oprf.params(id).hash)
+        const serverOutput = await server.fullEvaluate(input)
+        expect(output).toStrictEqual(serverOutput)
 
-            expect(output).toHaveLength(outLenBytes)
-
-            const serverOutput = await server.fullEvaluate(input)
-            expect(output).toStrictEqual(serverOutput)
-
-            const success = await server.verifyFinalize(input, output)
-            expect(success).toBe(true)
-        })
-    }
-)
+        const success = await server.verifyFinalize(input, output)
+        expect(success).toBe(true)
+    })
+})
