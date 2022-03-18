@@ -3,41 +3,69 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { OPRFClient, OPRFServer, Oprf, randomPrivateKey } from '../src/index.js'
+import {
+    OPRFClient,
+    OPRFServer,
+    Oprf,
+    POPRFClient,
+    POPRFServer,
+    VOPRFClient,
+    VOPRFServer,
+    generatePublicKey,
+    randomPrivateKey
+} from '../src/index.js'
 
-describe.each(Object.entries(Oprf.Suite))('oprf-workflow', (name, id) => {
-    it(`${name}`, async () => {
-        const te = new TextEncoder()
-        // /////////////////
-        // Setup Server
-        // /////////////////
-        const privateKey = await randomPrivateKey(id)
-        const server = new OPRFServer(id, privateKey)
-        // /////////////////
-        // Setup Client
-        // /////////////////
-        const client = new OPRFClient(id)
-        const input = te.encode('This is the client input')
-        // Client
-        const [finData, evalReq] = await client.blind(input)
-        // Client                     Server
-        //             evalReq
-        //       ------------------>>
+describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
+    describe.each(Object.entries(Oprf.Suite))(`${modeName}`, (suiteName, id) => {
+        let server: OPRFServer | VOPRFServer | POPRFServer
+        let client: OPRFClient | VOPRFClient | POPRFClient
 
-        // Server
-        const evaluation = await server.evaluate(evalReq)
-        // Client                     Server
-        //            evaluation
-        //       <<------------------
+        beforeAll(async () => {
+            const privateKey = await randomPrivateKey(id)
+            const publicKey = generatePublicKey(id, privateKey)
+            switch (mode) {
+                case Oprf.Mode.OPRF:
+                    server = new OPRFServer(id, privateKey)
+                    client = new OPRFClient(id)
+                    break
 
-        // Client
-        const output = await client.finalize(finData, evaluation)
-        expect(output).toHaveLength(Oprf.getOprfSize(id))
+                case Oprf.Mode.VOPRF:
+                    server = new VOPRFServer(id, privateKey)
+                    client = new VOPRFClient(id, publicKey)
+                    break
+                case Oprf.Mode.POPRF:
+                    server = new POPRFServer(id, privateKey)
+                    client = new POPRFClient(id, publicKey)
+                    break
+            }
+        })
 
-        const serverOutput = await server.fullEvaluate(input)
-        expect(output).toStrictEqual(serverOutput)
+        it(`${suiteName}`, async () => {
+            // Client                                       Server
+            // ====================================================
+            // Client
+            // blind, blindedElement = Blind(input)
+            const input = new TextEncoder().encode('This is the client input')
+            const [finData, evalReq] = await client.blind(input)
+            //             evalReq
+            //       ------------------>>
+            //                                              Server
+            //               evaluation = Evaluate(evalReq, info*)
+            const evaluation = await server.evaluate(evalReq)
+            //            evaluation
+            //       <<------------------
+            //
+            // Client
+            // output = Finalize(finData, evaluation, info*)
+            //
+            const output = await client.finalize(finData, evaluation)
+            expect(output).toHaveLength(Oprf.getOprfSize(id))
 
-        const success = await server.verifyFinalize(input, output)
-        expect(success).toBe(true)
+            const serverOutput = await server.fullEvaluate(input)
+            expect(output).toStrictEqual(serverOutput)
+
+            const success = await server.verifyFinalize(input, output)
+            expect(success).toBe(true)
+        })
     })
 })

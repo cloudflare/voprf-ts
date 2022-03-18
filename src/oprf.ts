@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Group, GroupID, SerializedElt, SerializedScalar } from './group.js'
+import { Group, GroupID, Scalar, SerializedElt, SerializedScalar } from './group.js'
 import { joinAll, to16bits } from './util.js'
 
 import { DLEQProof } from './dleq.js'
@@ -96,27 +96,32 @@ export abstract class Oprf {
 
     protected async coreFinalize(
         input: Uint8Array,
-        unblindedElement: Uint8Array,
-        info?: Uint8Array
+        element: Uint8Array,
+        info: Uint8Array
     ): Promise<Uint8Array> {
         let hasInfo: Uint8Array[] = []
         if (this.mode === Oprf.Mode.POPRF) {
-            if (info) {
-                hasInfo = [to16bits(info.length), info]
-            } else {
-                hasInfo = [new Uint8Array(0)]
-            }
+            hasInfo = [to16bits(info.length), info]
         }
 
         const hashInput = joinAll([
             to16bits(input.length),
             input,
             ...hasInfo,
-            to16bits(unblindedElement.length),
-            unblindedElement,
+            to16bits(element.length),
+            element,
             new TextEncoder().encode(Oprf.LABELS.FinalizeDST)
         ])
         return new Uint8Array(await crypto.subtle.digest(this.hash, hashInput))
+    }
+
+    protected scalarFromInfo(info: Uint8Array): Promise<Scalar> {
+        if (info.length >= 1 << 16) {
+            throw new Error('invalid info length')
+        }
+        const te = new TextEncoder()
+        const framedInfo = joinAll([te.encode('Info'), to16bits(info.length), info])
+        return this.gg.hashToScalar(framedInfo, this.getDST(Oprf.LABELS.HashToScalarDST))
     }
 }
 
@@ -131,14 +136,11 @@ export class Evaluated extends SerializedElt {
 }
 
 export class Evaluation {
-    constructor(
-        public readonly element: Evaluated,
-        public readonly proof?: DLEQProof
-    ) { }
+    constructor(public readonly element: Evaluated, public readonly proof?: DLEQProof) {}
 }
 
 export class EvaluationRequest {
-    constructor(public readonly blinded: Blinded) { }
+    constructor(public readonly blinded: Blinded) {}
 }
 
 export class FinalizeData {
@@ -146,5 +148,5 @@ export class FinalizeData {
         public readonly input: Uint8Array,
         public readonly blind: Blind,
         public readonly evalReq: EvaluationRequest
-    ) { }
+    ) {}
 }

@@ -13,7 +13,7 @@ import {
     Oprf,
     SuiteID
 } from './oprf.js'
-import { Group, Scalar } from './group.js'
+import { Elt, Group, Scalar, SerializedElt } from './group.js'
 
 class baseClient extends Oprf {
     constructor(mode: ModeID, suite: SuiteID) {
@@ -39,18 +39,79 @@ class baseClient extends Oprf {
         return [finData, evalReq]
     }
 
-    finalize(finData: FinalizeData, evaluation: Evaluation): Promise<Uint8Array> {
+    doFinalize(
+        finData: FinalizeData,
+        evaluation: Evaluation,
+        info = new Uint8Array(0)
+    ): Promise<Uint8Array> {
         const blindScalar = this.gg.deserializeScalar(finData.blind)
         const blindScalarInv = this.gg.invScalar(blindScalar)
         const Z = this.gg.deserialize(evaluation.element)
         const N = Group.mul(blindScalarInv, Z)
         const unblinded = this.gg.serialize(N)
-        return this.coreFinalize(finData.input, unblinded)
+        return this.coreFinalize(finData.input, unblinded, info)
     }
 }
 
 export class OPRFClient extends baseClient {
     constructor(suite: SuiteID) {
         super(Oprf.Mode.OPRF, suite)
+    }
+    finalize(finData: FinalizeData, evaluation: Evaluation): Promise<Uint8Array> {
+        return super.doFinalize(finData, evaluation)
+    }
+}
+
+export class VOPRFClient extends baseClient {
+    constructor(suite: SuiteID, private readonly pubKeyServer: Uint8Array) {
+        super(Oprf.Mode.VOPRF, suite)
+    }
+
+    finalize(finData: FinalizeData, evaluation: Evaluation): Promise<Uint8Array> {
+        if (!evaluation.proof) {
+            throw new Error('no proof provided')
+        }
+        const pkS = this.gg.deserialize(new SerializedElt(this.pubKeyServer))
+        const Q = this.gg.deserialize(finData.evalReq.blinded)
+        const kQ = this.gg.deserialize(evaluation.element)
+        if (!evaluation.proof.verify([this.gg.generator(), pkS], [Q, kQ])) {
+            throw new Error('proof failed')
+        }
+
+        return super.doFinalize(finData, evaluation)
+    }
+}
+
+export class POPRFClient extends baseClient {
+    constructor(suite: SuiteID, private readonly pubKeyServer: Uint8Array) {
+        super(Oprf.Mode.POPRF, suite)
+    }
+
+    private async pointFromInfo(info: Uint8Array): Promise<Elt> {
+        const m = await this.scalarFromInfo(info)
+        const T = this.gg.mulBase(m)
+        const pkS = this.gg.deserialize(new SerializedElt(this.pubKeyServer))
+        const tw = Group.add(T, pkS)
+        if (tw.isIdentity) {
+            throw new Error('invalid info')
+        }
+        return tw
+    }
+
+    async finalize(
+        finData: FinalizeData,
+        evaluation: Evaluation,
+        info = new Uint8Array(0)
+    ): Promise<Uint8Array> {
+        if (!evaluation.proof) {
+            throw new Error('no proof provided')
+        }
+        const tw = await this.pointFromInfo(info)
+        const Q = this.gg.deserialize(evaluation.element)
+        const kQ = this.gg.deserialize(finData.evalReq.blinded)
+        if (!evaluation.proof.verify([this.gg.generator(), tw], [Q, kQ])) {
+            throw new Error('proof failed')
+        }
+        return super.doFinalize(finData, evaluation, info)
     }
 }
