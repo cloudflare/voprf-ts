@@ -23,10 +23,12 @@
     "homepage": "https://github.com/cloudflare/voprf-ts#readme",
     "repository": "github:cloudflare/voprf-ts",
     "devDependencies": {
-        "@peculiar/webcrypto": "1.3.0",
+        "@peculiar/webcrypto": "1.3.2",
+        "@types/benchmark": "2.1.1",
         "@types/jest": "27.4.1",
         "@typescript-eslint/eslint-plugin": "5.13.0",
         "@typescript-eslint/parser": "5.13.0",
+        "benchmark": "2.1.4",
         "eslint": "8.10.0",
         "eslint-config-prettier": "8.4.0",
         "eslint-plugin-jest": "26.1.1",
@@ -43,7 +45,8 @@
         "clean": "tsc -b --clean . test",
         "test": "tsc -b test && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --ci",
         "lint": "eslint .",
-        "format": "prettier './(src|test)/*.ts' --write"
+        "bench": "tsc -b bench && node ./lib/bench/oprf.bench.js",
+        "format": "prettier './(src|test|bench)/*.ts' --write"
     },
     "dependencies": {
         "sjcl": "1.0.8"
