@@ -2,7 +2,8 @@
 // Copyright (c) 2021 Cloudflare, Inc.
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
-
+//
+// Implementation of batched discrete log equivalents proofs (DLEQ) as described in https://www.ietf.org/id/draft-irtf-cfrg-voprf-09.html#name-discrete-log-equivalence-pr.
 import { Elt, Group, Scalar } from './group.js'
 import { joinAll, to16bits } from './util.js'
 
@@ -18,7 +19,7 @@ const LABELS = {
     Composite: 'Composite',
     HashToScalar: 'HashToScalar-'
 } as const
-
+// computeComposites implements ComputeComposites and ComputeCompositiesFast functions from https://www.ietf.org/id/draft-irtf-cfrg-voprf-09.html#name-discrete-log-equivalence-pr.
 async function computeComposites(
     params: DLEQParams,
     b: Elt,
@@ -64,7 +65,7 @@ async function computeComposites(
 
     return { M, Z }
 }
-
+// challenge implements the shared subprocedure for generating a challenge used by the GenerateProof and VerifyProof functions from https://www.ietf.org/id/draft-irtf-cfrg-voprf-09.html#name-discrete-log-equivalence-pr to generate a challenge from the input elements. The point arguments correspond to [B, M, Z, t2, t3] from the specification.
 function challenge(params: DLEQParams, points: [Elt, Elt, Elt, Elt, Elt]): Promise<Scalar> {
     let h2Input = new Uint8Array()
     for (const p of points) {
@@ -95,7 +96,7 @@ class dleqProof implements DLEQProof {
     verify(p0: [Elt, Elt], p1: [Elt, Elt]): Promise<boolean> {
         return this.verify_batch(p0, [p1])
     }
-
+// verify_batch implements the VerifyProof function from https://www.ietf.org/id/draft-irtf-cfrg-voprf-09.html#name-discrete-log-equivalence-pr. The argument p0 corresponds to the elements A, B, and the argument p1s corresponds to the arrays of elements C and D from the specification.
     async verify_batch(p0: [Elt, Elt], p1s: Array<[Elt, Elt]>): Promise<boolean> {
         const { M, Z } = await computeComposites(this.params, p0[1], p1s)
         const t2 = Group.add(Group.mul(this.s, p0[0]), Group.mul(this.c, p0[1]))
@@ -111,7 +112,7 @@ export class DLEQProver {
     prove(k: Scalar, p0: [Elt, Elt], p1: [Elt, Elt], r?: Scalar): Promise<DLEQProof> {
         return this.prove_batch(k, p0, [p1], r)
     }
-
+// prove_batch implements the GenerateProof function from https://www.ietf.org/id/draft-irtf-cfrg-voprf-09.html#name-discrete-log-equivalence-pr. The argument p0 corresponds to the elements A, B, and the argument p1s corresponds to the arrays of elements C and D from the specification.
     async prove_batch(
         key: Scalar,
         p0: [Elt, Elt],
