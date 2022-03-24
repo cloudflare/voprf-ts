@@ -3,7 +3,17 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { OPRFClient, OPRFServer, OprfID, randomPrivateKey } from '../src/index.js'
+import {
+    OPRFClient,
+    OPRFServer,
+    Oprf,
+    POPRFClient,
+    POPRFServer,
+    VOPRFClient,
+    VOPRFServer,
+    generatePublicKey,
+    randomPrivateKey
+} from '../src/index.js'
 
 import Benchmark from 'benchmark'
 import { Crypto } from '@peculiar/webcrypto'
@@ -24,36 +34,56 @@ function asyncFn(call: CallableFunction) {
 
 async function benchOPRF() {
     const te = new TextEncoder()
-    const s = new Benchmark.Suite()
+    const bs = new Benchmark.Suite()
     const input = te.encode('This is the client input')
+    let server: OPRFServer | VOPRFServer | POPRFServer
+    let client: OPRFClient | VOPRFClient | POPRFClient
 
-    for (const id of [OprfID.OPRF_P256_SHA256, OprfID.OPRF_P384_SHA384, OprfID.OPRF_P521_SHA512]) {
-        const privateKey = await randomPrivateKey(id)
-        const server = new OPRFServer(id, privateKey)
-        const client = new OPRFClient(id)
-        const { blind, blindedElement } = await client.blind(input)
-        const evaluatedElement = await server.evaluate(blindedElement)
-        const name = `${OprfID[id as number]}: `
+    for (const [mode, m] of Object.entries(Oprf.Mode)) {
+        for (const [suite, id] of Object.entries(Oprf.Suite)) {
+            const privateKey = await randomPrivateKey(id)
+            const publicKey = generatePublicKey(id, privateKey)
 
-        s.add(
-            name + 'blind   ',
-            asyncFn(() => client.blind(input))
-        )
-        s.add(
-            name + 'evaluate',
-            asyncFn(() => server.evaluate(blindedElement))
-        )
-        s.add(
-            name + 'finalize',
-            asyncFn(() => client.finalize(input, blind, evaluatedElement))
-        )
+            switch (m) {
+                case Oprf.Mode.OPRF:
+                    server = new OPRFServer(id, privateKey)
+                    client = new OPRFClient(id)
+                    break
+
+                case Oprf.Mode.VOPRF:
+                    server = new VOPRFServer(id, privateKey)
+                    client = new VOPRFClient(id, publicKey)
+                    break
+                case Oprf.Mode.POPRF:
+                    server = new POPRFServer(id, privateKey)
+                    client = new POPRFClient(id, publicKey)
+                    break
+            }
+
+            const [finData, evalReq] = await client.blind(input)
+            const evaluatedElement = await server.evaluate(evalReq)
+            const prefix = mode + '/' + suite + '/'
+
+            bs.add(
+                prefix + 'blind   ',
+                asyncFn(() => client.blind(input))
+            )
+            bs.add(
+                prefix + 'evaluate',
+                asyncFn(() => server.evaluate(evalReq))
+            )
+            bs.add(
+                prefix + 'finalize',
+                asyncFn(() => client.finalize(finData, evaluatedElement))
+            )
+        }
     }
 
     try {
-        s.on('cycle', (ev: Benchmark.Event) => {
+        bs.on('cycle', (ev: Benchmark.Event) => {
             console.log(String(ev.target))
         })
-        s.run({ async: false })
+        bs.run({ async: false })
     } catch (e: unknown) {
         console.log('Error: ' + (e as Error).message)
         console.log('Stack: ' + (e as Error).stack)
