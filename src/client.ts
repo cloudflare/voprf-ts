@@ -28,7 +28,6 @@ class baseClient extends Oprf {
 
     async blind(input: Uint8Array): Promise<[FinalizeData, EvaluationRequest]> {
         const { scalar, blind } = await this.randomBlinder()
-        const dst = this.getDST(Oprf.LABELS.HashToGroupDST)
         const P = await this.gg.hashToGroup(input, this.getDST(Oprf.LABELS.HashToGroupDST))
         if (this.gg.isIdentity(P)) {
             throw new Error('InvalidInputError')
