@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { joinAll, xor } from './util.js'
+import { checkSize, joinAll, xor } from './util.js'
 
 import sjcl from './sjcl/index.js'
 
@@ -95,16 +95,14 @@ export class Scalar {
 
     add(s: Scalar): Scalar {
         compat(this, s)
-        const c = this.k.add(s.k)
-        c.mod(this.g.curve.r)
+        const c = this.k.add(s.k).mod(this.g.curve.r)
         c.normalize()
         return new Scalar(this.g, c)
     }
 
     sub(s: Scalar): Scalar {
         compat(this, s)
-        const c = this.k.sub(s.k).add(this.g.curve.r)
-        c.mod(this.g.curve.r)
+        const c = this.k.sub(s.k).mod(this.g.curve.r)
         c.normalize()
         return new Scalar(this.g, c)
     }
@@ -131,11 +129,13 @@ export class Scalar {
         return serScalar
     }
 
-    static deserialize(g: Group, bytes: Uint8Array) {
-        if (bytes.length != g.size) {
-            throw errDeserialization(Scalar)
-        }
-        const array = Array.from(bytes)
+    static size(g: Group): number {
+        return g.size
+    }
+
+    static deserialize(g: Group, bytes: Uint8Array): Scalar {
+        checkSize(bytes, Scalar, g)
+        const array = Array.from(bytes.subarray(0, g.size))
         const k = sjcl.bn.fromBits(sjcl.codec.bytes.toBits(array))
         k.normalize()
         if (k.greaterEquals(g.curve.r)) {
@@ -230,9 +230,14 @@ export class Elt {
         return compressed ? this.serComp(p) : this.serUnComp(p)
     }
 
+    // size returns the number of bytes of a non-zero element in compressed or uncompressed form.
+    static size(g: Group, compressed = true): number {
+        return 1 + (compressed ? g.size : g.size * 2)
+    }
+
     // Deserializes an element in compressed form.
     private static deserComp(g: Group, bytes: Uint8Array): Elt {
-        const array = Array.from(bytes.slice(1))
+        const array = Array.from(bytes.subarray(1))
         const bits = sjcl.codec.bytes.toBits(array)
         const x = new g.curve.field(sjcl.bn.fromBits(bits))
         const p = g.curve.field.modulus
@@ -251,7 +256,7 @@ export class Elt {
 
     // Deserializes an element in uncompressed form.
     private static deserUnComp(g: Group, bytes: Uint8Array): Elt {
-        const array = Array.from(bytes.slice(1))
+        const array = Array.from(bytes.subarray(1))
         const b = sjcl.codec.bytes.toBits(array)
         const point = g.curve.fromBits(b)
         point.x.fullReduce()

@@ -3,38 +3,27 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import {
-    Blind,
-    Blinded,
-    Evaluation,
-    EvaluationRequest,
-    FinalizeData,
-    ModeID,
-    Oprf,
-    SuiteID
-} from './oprf.js'
 import { Elt, Scalar } from './group.js'
+import { Evaluation, EvaluationRequest, FinalizeData, ModeID, Oprf, SuiteID } from './oprf.js'
 
 class baseClient extends Oprf {
     constructor(mode: ModeID, suite: SuiteID) {
         super(mode, suite)
     }
 
-    async randomBlinder(): Promise<{ scalar: Scalar; blind: Blind }> {
-        const scalar = await this.gg.randomScalar()
-        const blind = new Blind(scalar.serialize())
-        return { scalar, blind }
+    randomBlinder(): Promise<Scalar> {
+        return this.gg.randomScalar()
     }
 
     async blind(input: Uint8Array): Promise<[FinalizeData, EvaluationRequest]> {
-        const { scalar, blind } = await this.randomBlinder()
+        const scalar = await this.randomBlinder()
         const P = await this.gg.hashToGroup(input, this.getDST(Oprf.LABELS.HashToGroupDST))
         if (P.isIdentity()) {
             throw new Error('InvalidInputError')
         }
         const Q = P.mul(scalar)
-        const evalReq = new EvaluationRequest(new Blinded(Q.serialize()))
-        const finData = new FinalizeData(input, blind, evalReq)
+        const evalReq = new EvaluationRequest(Q)
+        const finData = new FinalizeData(input, scalar, evalReq)
         return [finData, evalReq]
     }
 
@@ -43,10 +32,8 @@ class baseClient extends Oprf {
         evaluation: Evaluation,
         info = new Uint8Array(0)
     ): Promise<Uint8Array> {
-        const blindScalar = Scalar.deserialize(this.gg, finData.blind)
-        const blindScalarInv = blindScalar.inv()
-        const Z = Elt.deserialize(this.gg, evaluation.element)
-        const N = Z.mul(blindScalarInv)
+        const blindInv = finData.blind.inv()
+        const N = evaluation.evaluated.mul(blindInv)
         const unblinded = N.serialize()
         return this.coreFinalize(finData.input, unblinded, info)
     }
@@ -71,9 +58,12 @@ export class VOPRFClient extends baseClient {
             throw new Error('no proof provided')
         }
         const pkS = Elt.deserialize(this.gg, this.pubKeyServer)
-        const Q = Elt.deserialize(this.gg, finData.evalReq.blinded)
-        const kQ = Elt.deserialize(this.gg, evaluation.element)
-        if (!evaluation.proof.verify([this.gg.generator(), pkS], [Q, kQ])) {
+        if (
+            !evaluation.proof.verify(
+                [this.gg.generator(), pkS],
+                [finData.evalReq.blinded, evaluation.evaluated]
+            )
+        ) {
             throw new Error('proof failed')
         }
 
@@ -106,9 +96,12 @@ export class POPRFClient extends baseClient {
             throw new Error('no proof provided')
         }
         const tw = await this.pointFromInfo(info)
-        const Q = Elt.deserialize(this.gg, evaluation.element)
-        const kQ = Elt.deserialize(this.gg, finData.evalReq.blinded)
-        if (!evaluation.proof.verify([this.gg.generator(), tw], [Q, kQ])) {
+        if (
+            !evaluation.proof.verify(
+                [this.gg.generator(), tw],
+                [evaluation.evaluated, finData.evalReq.blinded]
+            )
+        ) {
             throw new Error('proof failed')
         }
         return super.doFinalize(finData, evaluation, info)

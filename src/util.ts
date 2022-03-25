@@ -46,3 +46,30 @@ export function to16bits(n: number): Uint8Array {
     }
     return new Uint8Array([(n >> 8) & 0xff, n & 0xff])
 }
+
+export function toU16LenPrefix(b: Uint8Array): Uint8Array[] {
+    return [to16bits(b.length), b]
+}
+
+export function fromU16LenPrefix(b: Uint8Array): { head: Uint8Array; tail: Uint8Array } {
+    if (b.length < 2) {
+        throw new Error(`buffer shorter than expected`)
+    }
+    const n = (b[0] << 8) | b[1]
+    if (b.length < 2 + n) {
+        throw new Error(`buffer shorter than expected`)
+    }
+    const head = b.subarray(2, 2 + n)
+    const tail = b.subarray(2 + n)
+    return { head, tail }
+}
+
+export function checkSize<U>(
+    x: Uint8Array,
+    T: { name: string; size: (x: U) => number },
+    u: U
+): void | never {
+    if (x.length < T.size(u)) {
+        throw new Error(`error deserializing ${T.name}: buffer shorter than expected`)
+    }
+}
