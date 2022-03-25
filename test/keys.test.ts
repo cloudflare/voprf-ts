@@ -27,9 +27,10 @@ describe.each(Object.entries(Oprf.Suite))('oprf-keys', (name, id) => {
             expect(ret).toBe(false)
         })
 
-        it('orderPrivateKey', () => {
-            const orderPk = gg.serializeScalar(gg.order())
-            const ret = validatePrivateKey(id, orderPk)
+        it('badPrivateKey', () => {
+            const bad = new Uint8Array(100)
+            bad.fill(0xff)
+            const ret = validatePrivateKey(id, bad)
             expect(ret).toBe(false)
         })
 
@@ -40,7 +41,7 @@ describe.each(Object.entries(Oprf.Suite))('oprf-keys', (name, id) => {
         })
 
         it('identityPublicKey', () => {
-            const identityKeyBytes = gg.serialize(gg.identity())
+            const identityKeyBytes = gg.identity().serialize()
             const ret = validatePublicKey(id, identityKeyBytes)
             expect(ret).toBe(false)
         })

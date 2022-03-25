@@ -11,6 +11,7 @@ import {
     Oprf,
     POPRFClient,
     POPRFServer,
+    Scalar,
     SuiteID,
     VOPRFClient,
     VOPRFServer,
@@ -106,7 +107,7 @@ describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]
                         for (const c of [OPRFClient, VOPRFClient, wrapPOPRFClient]) {
                             jest.spyOn(c.prototype, 'randomBlinder').mockImplementation(() => {
                                 const blind = new Blind(fromHex(vi.Blind))
-                                const scalar = Oprf.getGroup(id).deserializeScalar(blind)
+                                const scalar = Scalar.deserialize(Oprf.getGroup(id), blind)
                                 return Promise.resolve({ scalar, blind })
                             })
                         }

@@ -30,7 +30,7 @@ async function computeComposites(
     key?: Scalar
 ): Promise<{ M: Elt; Z: Elt }> {
     const te = new TextEncoder()
-    const Bm = params.gg.serialize(b)
+    const Bm = b.serialize()
     const seedDST = te.encode(LABELS.Seed + params.dst)
     const h1Input = joinAll([to16bits(Bm.length), Bm, to16bits(seedDST.length), seedDST])
     const seed = new Uint8Array(await crypto.subtle.digest(params.hash, h1Input))
@@ -41,8 +41,8 @@ async function computeComposites(
     let Z = params.gg.identity()
     let i = 0
     for (const [c, d] of cd) {
-        const Ci = params.gg.serialize(c)
-        const Di = params.gg.serialize(d)
+        const Ci = c.serialize()
+        const Di = d.serialize()
 
         const h2Input = joinAll([
             to16bits(seed.length),
@@ -55,15 +55,15 @@ async function computeComposites(
             compositeLabel
         ])
         const di = await params.gg.hashToScalar(h2Input, h2sDST)
-        M = Group.add(M, Group.mul(di, c))
+        M = M.add(c.mul(di))
 
         if (!key) {
-            Z = Group.add(Z, Group.mul(di, d))
+            Z = Z.add(d.mul(di))
         }
     }
 
     if (key) {
-        Z = Group.mul(key, M)
+        Z = M.mul(key)
     }
 
     return { M, Z }
@@ -77,7 +77,7 @@ async function computeComposites(
 function challenge(params: DLEQParams, points: [Elt, Elt, Elt, Elt, Elt]): Promise<Scalar> {
     let h2Input = new Uint8Array()
     for (const p of points) {
-        const P = params.gg.serialize(p)
+        const P = p.serialize()
         h2Input = joinAll([h2Input, to16bits(P.length), P])
     }
     const te = new TextEncoder()
@@ -111,10 +111,10 @@ class dleqProof implements DLEQProof {
     // corresponds to the arrays of elements C and D from the specification.
     async verify_batch(p0: [Elt, Elt], p1s: Array<[Elt, Elt]>): Promise<boolean> {
         const { M, Z } = await computeComposites(this.params, p0[1], p1s)
-        const t2 = Group.add(Group.mul(this.s, p0[0]), Group.mul(this.c, p0[1]))
-        const t3 = Group.add(Group.mul(this.s, M), Group.mul(this.c, Z))
+        const t2 = p0[0].mul2(this.s, p0[1], this.c)
+        const t3 = M.mul2(this.s, Z, this.c)
         const c = await challenge(this.params, [p0[1], M, Z, t2, t3])
-        return this.params.gg.equalScalar(this.c, c)
+        return this.c.isEqual(c)
     }
 }
 
@@ -137,10 +137,10 @@ export class DLEQProver {
     ): Promise<DLEQProof> {
         const rnd = r ? r : await this.params.gg.randomScalar()
         const { M, Z } = await computeComposites(this.params, p0[1], p1s, key)
-        const t2 = Group.mul(rnd, p0[0])
-        const t3 = Group.mul(rnd, M)
+        const t2 = p0[0].mul(rnd)
+        const t3 = M.mul(rnd)
         const c = await challenge(this.params, [p0[1], M, Z, t2, t3])
-        const s = this.params.gg.subScalar(rnd, this.params.gg.mulScalar(c, key))
+        const s = rnd.sub(c.mul(key))
         return new dleqProof(this.params, c, s)
     }
 }

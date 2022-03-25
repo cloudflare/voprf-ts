@@ -45,7 +45,7 @@
         "clean": "tsc -b --clean . test",
         "test": "tsc -b test && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --ci",
         "lint": "eslint .",
-        "bench": "tsc -b bench && node ./lib/bench/oprf.bench.js",
+        "bench": "tsc -b bench && node ./lib/bench/index.js",
         "format": "prettier './(src|test|bench)/*.ts' --write"
     },
     "dependencies": {
