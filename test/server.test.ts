@@ -3,15 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import {
-    Group,
-    OPRFClient,
-    OPRFServer,
-    Oprf,
-    SerializedElt,
-    SerializedScalar,
-    randomPrivateKey
-} from '../src/index.js'
+import { Elt, Group, OPRFClient, OPRFServer, Oprf, Scalar, randomPrivateKey } from '../src/index.js'
 
 import { jest } from '@jest/globals'
 
@@ -41,11 +33,11 @@ function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
     const [algorithm, key, data] = x
     if (algorithm === 'OPRF') {
         const g = new Group(Group.getID((key.algorithm as EcdsaParams).name))
-        const P = g.deserialize(new SerializedElt(data as Uint8Array))
-        const serSk = new SerializedScalar((key as CryptoKeyWithBuffer).keyData)
-        const sk = g.deserializeScalar(serSk)
-        const Z = Group.mul(sk, P)
-        const serZ = g.serialize(Z)
+        const P = Elt.deserialize(g, new Uint8Array(data as ArrayBuffer))
+        const serSk = new Uint8Array((key as CryptoKeyWithBuffer).keyData)
+        const sk = Scalar.deserialize(g, serSk)
+        const Z = P.mul(sk)
+        const serZ = Z.serialize()
         return Promise.resolve(serZ.buffer as ArrayBuffer)
     }
     throw new Error('bad algorithm')

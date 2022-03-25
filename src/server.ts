@@ -4,7 +4,7 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import { Blinded, Evaluated, Evaluation, EvaluationRequest, ModeID, Oprf, SuiteID } from './oprf.js'
-import { Group, Scalar, SerializedScalar } from './group.js'
+import { Elt, Scalar } from './group.js'
 
 import { DLEQProver } from './dleq.js'
 import { ctEqual } from './util.js'
@@ -20,10 +20,9 @@ class baseServer extends Oprf {
     }
 
     protected doEvaluation(bl: Blinded, key: Uint8Array): Promise<Evaluated> {
-        if (this.supportsWebCryptoOPRF) {
-            return this.evaluateWebCrypto(bl, key)
-        }
-        return Promise.resolve(this.evaluateSJCL(bl, key))
+        return this.supportsWebCryptoOPRF
+            ? this.evaluateWebCrypto(bl, key)
+            : Promise.resolve(this.evaluateSJCL(bl, key))
     }
 
     private async evaluateWebCrypto(bl: Blinded, key: Uint8Array): Promise<Evaluated> {
@@ -40,27 +39,27 @@ class baseServer extends Oprf {
         // webcrypto accepts only compressed points.
         let compressed = Uint8Array.from(bl)
         if (bl[0] === 0x04) {
-            const P = this.gg.deserialize(bl)
-            compressed = Uint8Array.from(this.gg.serialize(P, true))
+            const P = Elt.deserialize(this.gg, bl)
+            compressed = Uint8Array.from(P.serialize(true))
         }
         return new Evaluated(await crypto.subtle.sign('OPRF', crKey, compressed))
     }
 
     private evaluateSJCL(bl: Blinded, key: Uint8Array): Evaluated {
-        const P = this.gg.deserialize(bl)
-        const sk = this.gg.deserializeScalar(new SerializedScalar(key))
-        const Z = Group.mul(sk, P)
-        return new Evaluated(this.gg.serialize(Z))
+        const P = Elt.deserialize(this.gg, bl)
+        const sk = Scalar.deserialize(this.gg, key)
+        const Z = P.mul(sk)
+        return new Evaluated(Z.serialize())
     }
 
     protected async secretFromInfo(info: Uint8Array): Promise<[Scalar, Scalar]> {
         const m = await this.scalarFromInfo(info)
-        const skS = this.gg.deserializeScalar(new SerializedScalar(this.privateKey))
-        const t = this.gg.addScalar(m, skS)
-        if (this.gg.isScalarZero(t)) {
+        const skS = Scalar.deserialize(this.gg, this.privateKey)
+        const t = m.add(skS)
+        if (t.isZero()) {
             throw new Error('inverse of zero')
         }
-        const tInv = this.gg.invScalar(t)
+        const tInv = t.inv()
         return [t, tInv]
     }
 
@@ -71,14 +70,14 @@ class baseServer extends Oprf {
         let secret = this.privateKey
         if (this.mode === Oprf.Mode.POPRF) {
             const [, evalSecret] = await this.secretFromInfo(info)
-            secret = this.gg.serializeScalar(evalSecret)
+            secret = evalSecret.serialize()
         }
 
         const P = await this.gg.hashToGroup(input, this.getDST(Oprf.LABELS.HashToGroupDST))
-        if (this.gg.isIdentity(P)) {
+        if (P.isIdentity()) {
             throw new Error('InvalidInputError')
         }
-        const blinded = new Blinded(this.gg.serialize(P))
+        const blinded = new Blinded(P.serialize())
         const evaluated = await this.doEvaluation(blinded, secret)
         return this.coreFinalize(input, evaluated, info)
     }
@@ -107,10 +106,10 @@ export class VOPRFServer extends baseServer {
     async evaluate(req: EvaluationRequest): Promise<Evaluation> {
         const e = await this.doEvaluation(req.blinded, this.privateKey)
         const prover = new DLEQProver({ gg: this.gg, hash: this.hash, dst: '' })
-        const skS = this.gg.deserializeScalar(new SerializedScalar(this.privateKey))
-        const pkS = this.gg.mulBase(skS)
-        const Q = this.gg.deserialize(req.blinded)
-        const kQ = this.gg.deserialize(e)
+        const skS = Scalar.deserialize(this.gg, this.privateKey)
+        const pkS = this.gg.mulGen(skS)
+        const Q = Elt.deserialize(this.gg, req.blinded)
+        const kQ = Elt.deserialize(this.gg, e)
         const proof = await prover.prove(skS, [this.gg.generator(), pkS], [Q, kQ])
         return new Evaluation(e, proof)
     }
@@ -128,12 +127,12 @@ export class POPRFServer extends baseServer {
     }
     async evaluate(req: EvaluationRequest, info = new Uint8Array(0)): Promise<Evaluation> {
         const [keyProof, evalSecret] = await this.secretFromInfo(info)
-        const secret = this.gg.serializeScalar(evalSecret)
+        const secret = evalSecret.serialize()
         const e = await this.doEvaluation(req.blinded, secret)
         const prover = new DLEQProver({ gg: this.gg, hash: this.hash, dst: '' })
-        const kG = this.gg.mulBase(keyProof)
-        const Q = this.gg.deserialize(e)
-        const kQ = this.gg.deserialize(req.blinded)
+        const kG = this.gg.mulGen(keyProof)
+        const Q = Elt.deserialize(this.gg, e)
+        const kQ = Elt.deserialize(this.gg, req.blinded)
         const proof = await prover.prove(keyProof, [this.gg.generator(), kG], [Q, kQ])
         return new Evaluation(e, proof)
     }

@@ -16,11 +16,6 @@ import {
 } from '../src/index.js'
 
 import Benchmark from 'benchmark'
-import { Crypto } from '@peculiar/webcrypto'
-
-if (typeof crypto === 'undefined') {
-    global.crypto = new Crypto()
-}
 
 function asyncFn(call: CallableFunction) {
     return {
@@ -32,17 +27,16 @@ function asyncFn(call: CallableFunction) {
     }
 }
 
-async function benchOPRF() {
+export async function benchOPRF(bs: Benchmark.Suite) {
     const te = new TextEncoder()
-    const bs = new Benchmark.Suite()
     const input = te.encode('This is the client input')
-    let server: OPRFServer | VOPRFServer | POPRFServer
-    let client: OPRFClient | VOPRFClient | POPRFClient
 
     for (const [mode, m] of Object.entries(Oprf.Mode)) {
         for (const [suite, id] of Object.entries(Oprf.Suite)) {
             const privateKey = await randomPrivateKey(id)
             const publicKey = generatePublicKey(id, privateKey)
+            let server: OPRFServer | VOPRFServer | POPRFServer
+            let client: OPRFClient | VOPRFClient | POPRFClient
 
             switch (m) {
                 case Oprf.Mode.OPRF:
@@ -78,16 +72,4 @@ async function benchOPRF() {
             )
         }
     }
-
-    try {
-        bs.on('cycle', (ev: Benchmark.Event) => {
-            console.log(String(ev.target))
-        })
-        bs.run({ async: false })
-    } catch (e: unknown) {
-        console.log('Error: ' + (e as Error).message)
-        console.log('Stack: ' + (e as Error).stack)
-    }
 }
-
-benchOPRF()

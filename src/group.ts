@@ -7,18 +7,19 @@ import { joinAll, xor } from './util.js'
 
 import sjcl from './sjcl/index.js'
 
-export class SerializedElt extends Uint8Array {
-    readonly _serializedEltBrand = ''
+function errDeserialization(T: { name: string }) {
+    return new Error(`group: deserialization of ${T.name} failed.`)
+}
+function errGroup(X: GroupID, Y: GroupID) {
+    return new Error(`group: mismatch between groups ${X} and ${Y}.`)
+}
+function errBadGroup(X: string) {
+    return new Error(`group: bad group name ${X}.`)
 }
 
-export class SerializedScalar extends Uint8Array {
-    readonly _serializedScalarBrand = ''
+function compat(x: { g: Group }, y: { g: Group }): void | never {
+    if (x.g.id !== y.g.id) throw errGroup(x.g.id, y.g.id)
 }
-
-export type Elt = sjcl.ecc.point
-export type Scalar = sjcl.bn
-export type Curve = sjcl.ecc.curve
-export type FieldElt = sjcl.bn
 
 function hashParams(hash: string): {
     outLenBytes: number // returns the size in bytes of the output.
@@ -77,293 +78,221 @@ async function expandXMD(
     return pseudo.slice(0, numBytes)
 }
 
-export enum GroupID { // eslint-disable-line no-shadow
-    P256 = 'P-256',
-    P384 = 'P-384',
-    P521 = 'P-521'
+export class Scalar {
+    private constructor(public readonly g: Group, public readonly k: sjcl.bn) {}
+
+    static new(g: Group): Scalar {
+        return new Scalar(g, new sjcl.bn(0))
+    }
+
+    isEqual(s: Scalar): boolean {
+        return this.k.equals(s.k)
+    }
+
+    isZero(): boolean {
+        return this.k.equals(0)
+    }
+
+    add(s: Scalar): Scalar {
+        compat(this, s)
+        const c = this.k.add(s.k)
+        c.mod(this.g.curve.r)
+        c.normalize()
+        return new Scalar(this.g, c)
+    }
+
+    sub(s: Scalar): Scalar {
+        compat(this, s)
+        const c = this.k.sub(s.k).add(this.g.curve.r)
+        c.mod(this.g.curve.r)
+        c.normalize()
+        return new Scalar(this.g, c)
+    }
+
+    mul(s: Scalar): Scalar {
+        compat(this, s)
+        const c = this.k.mulmod(s.k, this.g.curve.r)
+        c.normalize()
+        return new Scalar(this.g, c)
+    }
+
+    inv(): Scalar {
+        return new Scalar(this.g, this.k.inverseMod(this.g.curve.r))
+    }
+
+    serialize(): Uint8Array {
+        const k = this.k.mod(this.g.curve.r)
+        k.normalize()
+
+        const ab = sjcl.codec.arrayBuffer.fromBits(k.toBits(), false)
+        const unpaded = new Uint8Array(ab)
+        const serScalar = new Uint8Array(this.g.size)
+        serScalar.set(unpaded, this.g.size - unpaded.length)
+        return serScalar
+    }
+
+    static deserialize(g: Group, bytes: Uint8Array) {
+        if (bytes.length != g.size) {
+            throw errDeserialization(Scalar)
+        }
+        const array = Array.from(bytes)
+        const k = sjcl.bn.fromBits(sjcl.codec.bytes.toBits(array))
+        k.normalize()
+        if (k.greaterEquals(g.curve.r)) {
+            throw errDeserialization(Scalar)
+        }
+        return new Scalar(g, k)
+    }
+
+    static async hash(g: Group, msg: Uint8Array, dst: Uint8Array): Promise<Scalar> {
+        const { hash, L } = g.hashParams
+        const bytes = await expandXMD(hash, msg, dst, L)
+        const array = Array.from(bytes)
+        const bitArr = sjcl.codec.bytes.toBits(array)
+        const k = sjcl.bn.fromBits(bitArr).mod(g.curve.r)
+        return new Scalar(g, k)
+    }
 }
 
-/* eslint new-cap: ["error", { "properties": false }] */
+export class Elt {
+    private constructor(public readonly g: Group, public p: sjcl.ecc.point) {}
 
-export class Group {
-    static readonly paranoia = 6
-
-    public readonly id: GroupID
-
-    public readonly curve: Curve
-
-    public readonly size: number
-
-    public hashParams: {
-        // See Section F.2.1.2 at https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#appendix-F.2.1.2
-        hash: string
-        L: number
-        Z: number
-        c2: string // 2. c2 = sqrt(-Z) in GF(p).
+    static new(g: Group): Elt {
+        return new Elt(g, new sjcl.ecc.point(g.curve))
+    }
+    static gen(g: Group): Elt {
+        return new Elt(g, g.curve.G)
     }
 
-    constructor(gid: GroupID) {
-        switch (gid) {
-            case GroupID.P256:
-                this.curve = sjcl.ecc.curves.c256
-                this.size = 32
-                this.hashParams = {
-                    hash: 'SHA-256',
-                    L: 48,
-                    Z: -10,
-                    // c2 = sqrt(-Z) in GF(p).
-                    c2: '0x25ac71c31e27646736870398ae7f554d8472e008b3aa2a49d332cbd81bcc3b80'
-                }
-                break
-            case GroupID.P384:
-                this.curve = sjcl.ecc.curves.c384
-                this.size = 48
-                this.hashParams = {
-                    hash: 'SHA-384',
-                    L: 72,
-                    Z: -12,
-                    // c2 = sqrt(-Z) in GF(p).
-                    c2: '0x2accb4a656b0249c71f0500e83da2fdd7f98e383d68b53871f872fcb9ccb80c53c0de1f8a80f7e1914e2ec69f5a626b3'
-                }
-                break
-            case GroupID.P521:
-                this.curve = sjcl.ecc.curves.c521
-                this.size = 66
-                this.hashParams = {
-                    hash: 'SHA-512',
-                    L: 98,
-                    Z: -4,
-                    // c2 = sqrt(-Z) in GF(p).
-                    c2: '0x2'
-                }
-                break
-            default:
-                throw new Error(`group not implemented: ${gid}`)
+    isIdentity(): boolean {
+        return this.p.isIdentity
+    }
+
+    isEqual(a: Elt): boolean {
+        compat(this, a)
+        if (this.p.isIdentity && a.p.isIdentity) {
+            return true
+        } else if (this.p.isIdentity || a.p.isIdentity) {
+            return false
         }
-        this.id = gid
+        const { x: x1, y: y1 } = this.p
+        const { x: x2, y: y2 } = a.p
+        return x1.equals(x2) && y1.equals(y2)
     }
 
-    static getID(id: string): GroupID {
-        switch (id) {
-            case 'P-256':
-                return GroupID.P256
-            case 'P-384':
-                return GroupID.P384
-            case 'P-521':
-                return GroupID.P521
-            default:
-                throw new Error(`group not implemented: ${id}`)
-        }
+    neg(): Elt {
+        return this.p.negate()
     }
-
-    identity(): Elt {
-        return new sjcl.ecc.point(this.curve) as Elt
+    add(a: Elt): Elt {
+        compat(this, a)
+        return new Elt(this.g, this.p.toJac().add(a.p).toAffine())
     }
-
-    isIdentity(e: Elt): boolean {
-        return e.isIdentity
+    mul(s: Scalar): Elt {
+        compat(this, s)
+        return new Elt(this.g, this.p.mult(s.k))
     }
-
-    generator(): Elt {
-        return this.curve.G as Elt
+    mul2(k1: Scalar, a: Elt, k2: Scalar): Elt {
+        compat(this, k1)
+        compat(this, k2)
+        compat(this, a)
+        return new Elt(this.g, this.p.mult2(k1.k, k2.k, a.p))
     }
-
-    order(): Scalar {
-        return this.curve.r as Scalar
-    }
-
     // Serializes an element in uncompressed form.
-    private serUnComp(e: Elt): SerializedElt {
-        const xy = sjcl.codec.arrayBuffer.fromBits(e.toBits(), false)
+    private serUnComp(a: sjcl.ecc.point): Uint8Array {
+        const xy = sjcl.codec.arrayBuffer.fromBits(a.toBits(), false)
         const bytes = new Uint8Array(xy)
-        if (bytes.length !== 2 * this.size) {
+        if (bytes.length !== 2 * this.g.size) {
             throw new Error('error serializing element')
         }
-        const serElt = new SerializedElt(1 + 2 * this.size)
+        const serElt = new Uint8Array(1 + 2 * this.g.size)
         serElt[0] = 0x04
         serElt.set(bytes, 1)
         return serElt
     }
 
     // Serializes an element in compressed form.
-    private serComp(e: Elt): SerializedElt {
-        const x = sjcl.codec.arrayBuffer.fromBits(e.x.toBits(null), false)
-        const bytes = new Uint8Array(x)
-        const serElt = new SerializedElt(1 + this.size)
+    private serComp(a: sjcl.ecc.point): Uint8Array {
+        const x = new Uint8Array(sjcl.codec.arrayBuffer.fromBits(a.x.toBits(null), false))
+        const serElt = new Uint8Array(1 + this.g.size)
 
-        serElt[0] = 0x02 | (e.y.getLimb(0) & 1)
-        serElt.set(bytes, 1 + this.size - bytes.length)
+        serElt[0] = 0x02 | (a.y.getLimb(0) & 1)
+        serElt.set(x, 1 + this.g.size - x.length)
         return serElt
     }
 
-    serialize(e: Elt, compressed = true): SerializedElt {
-        if (e.isIdentity) {
-            return new SerializedElt(1)
+    serialize(compressed = true): Uint8Array {
+        if (this.p.isIdentity) {
+            return Uint8Array.from([0])
         }
-        e.x.fullReduce()
-        e.y.fullReduce()
-        return compressed ? this.serComp(e) : this.serUnComp(e)
+        const p = this.p
+        p.x.fullReduce()
+        p.y.fullReduce()
+        return compressed ? this.serComp(p) : this.serUnComp(p)
     }
 
     // Deserializes an element in compressed form.
-    private deserComp(serElt: SerializedElt): Elt {
-        const array = Array.from(serElt.slice(1))
-        const bytes = sjcl.codec.bytes.toBits(array)
-        const x = new this.curve.field(sjcl.bn.fromBits(bytes))
-        const p = this.curve.field.modulus
+    private static deserComp(g: Group, bytes: Uint8Array): Elt {
+        const array = Array.from(bytes.slice(1))
+        const bits = sjcl.codec.bytes.toBits(array)
+        const x = new g.curve.field(sjcl.bn.fromBits(bits))
+        const p = g.curve.field.modulus
         const exp = p.add(new sjcl.bn(1)).halveM().halveM()
-        let y = x.square().add(this.curve.a).mul(x).add(this.curve.b).power(exp)
+        let y = x.square().add(g.curve.a).mul(x).add(g.curve.b).power(exp)
         y.fullReduce()
-        if ((serElt[0] & 1) !== (y.limbs[0] & 1)) {
+        if ((bytes[0] & 1) !== (y.getLimb(0) & 1)) {
             y = p.sub(y).mod(p)
         }
-        const point = new sjcl.ecc.point(this.curve, new sjcl.bn(x), new sjcl.bn(y))
+        const point = new sjcl.ecc.point(g.curve, new g.curve.field(x), new g.curve.field(y))
         if (!point.isValid()) {
-            throw new Error('point not in curve')
+            throw errDeserialization(Elt)
         }
-        return point as Elt
+        return new Elt(g, point)
     }
 
     // Deserializes an element in uncompressed form.
-    private deserUnComp(serElt: SerializedElt): Elt {
-        const array = Array.from(serElt.slice(1))
+    private static deserUnComp(g: Group, bytes: Uint8Array): Elt {
+        const array = Array.from(bytes.slice(1))
         const b = sjcl.codec.bytes.toBits(array)
-        const point = this.curve.fromBits(b)
+        const point = g.curve.fromBits(b)
         point.x.fullReduce()
         point.y.fullReduce()
-        return point as Elt
+        return new Elt(g, point)
     }
 
     // Deserializes an element, handles both compressed and uncompressed forms.
-    deserialize(serElt: SerializedElt): Elt {
-        const len = serElt.length
+    static deserialize(g: Group, bytes: Uint8Array): Elt {
+        const len = bytes.length
         switch (true) {
-            case len === 1 && serElt[0] === 0x00:
-                return this.identity()
-            case len === 1 + this.size && (serElt[0] === 0x02 || serElt[0] === 0x03):
-                return this.deserComp(serElt)
-            case len === 1 + 2 * this.size && serElt[0] === 0x04:
-                return this.deserUnComp(serElt)
+            case len === 1 && bytes[0] === 0x00:
+                return g.identity()
+            case len === 1 + g.size && (bytes[0] === 0x02 || bytes[0] === 0x03):
+                return Elt.deserComp(g, bytes)
+            case len === 1 + 2 * g.size && bytes[0] === 0x04:
+                return Elt.deserUnComp(g, bytes)
             default:
-                throw new Error('error deserializing element')
+                throw errDeserialization(Elt)
         }
     }
 
-    serializeScalar(s: Scalar): SerializedScalar {
-        const k = s.mod(this.curve.r)
-        k.normalize()
-
-        const ab = sjcl.codec.arrayBuffer.fromBits(k.toBits(), false)
-        const unpaded = new Uint8Array(ab)
-        const serScalar = new SerializedScalar(this.size)
-        serScalar.set(unpaded, this.size - unpaded.length)
-        return serScalar
-    }
-
-    deserializeScalar(serScalar: SerializedScalar): Scalar {
-        const array = Array.from(serScalar)
-        const k = sjcl.bn.fromBits(sjcl.codec.bytes.toBits(array))
-        k.normalize()
-        if (k.greaterEquals(this.curve.r)) {
-            throw new Error('error deserializing scalar')
-        }
-        return k as Scalar
-    }
-
-    equalScalar(a: Scalar, b: Scalar): boolean {
-        return a.equals(b)
-    }
-
-    addScalar(a: Scalar, b: Scalar): Scalar {
-        const c = a.add(b)
-        c.mod(this.curve.r)
-        c.normalize()
-        return c
-    }
-
-    subScalar(a: Scalar, b: Scalar): Scalar {
-        const c = a.sub(b).add(this.curve.r)
-        c.mod(this.curve.r)
-        c.normalize()
-        return c
-    }
-
-    mulScalar(a: Scalar, b: Scalar): Scalar {
-        const c = a.mulmod(b, this.curve.r)
-        c.normalize()
-        return c
-    }
-
-    invScalar(k: Scalar): Scalar {
-        return k.inverseMod(this.curve.r)
-    }
-
-    isScalarZero(k: Scalar): boolean {
-        return k.equals(0)
-    }
-
-    static add(e: Elt, f: Elt): Elt {
-        return e.toJac().add(f).toAffine() as Elt
-    }
-
-    static mul(k: Scalar, e: Elt): Elt {
-        return e.mult(k) as Elt
-    }
-
-    mulBase(k: Scalar): Elt {
-        return this.curve.G.mult(k) as Elt
-    }
-
-    equal(a: Elt, b: Elt): boolean {
-        if (this.curve !== a.curve || this.curve !== b.curve) {
-            return false
-        }
-        if (a.isIdentity && b.isIdentity) {
-            return true
-        }
-        return a.x.equals(b.x) && a.y.equals(b.y)
-    }
-
-    randomScalar(): Promise<Scalar> {
-        const msg = new Uint8Array(this.hashParams.L)
-        crypto.getRandomValues(msg)
-        return this.hashToScalar(msg, new Uint8Array())
-    }
-
-    async hashToScalar(msg: Uint8Array, dst: Uint8Array): Promise<Scalar> {
-        const { hash, L } = this.hashParams
-        const bytes = await expandXMD(hash, msg, dst, L)
-        const array = Array.from(bytes)
-        const bitArr = sjcl.codec.bytes.toBits(array)
-        const s = sjcl.bn.fromBits(bitArr).mod(this.curve.r)
-        return s as Scalar
-    }
-
-    async hashToGroup(msg: Uint8Array, dst: Uint8Array): Promise<Elt> {
-        const u = await this.hashToField(msg, dst, 2)
-        const Q0 = this.sswu(u[0])
-        const Q1 = this.sswu(u[1])
-        return Q0.add(Q1.toAffine()).toAffine() as Elt
-    }
-
-    private async hashToField(
+    private static async hashToField(
+        g: Group,
         msg: Uint8Array,
         dst: Uint8Array,
         count: number
-    ): Promise<FieldElt[]> {
-        const { hash, L } = this.hashParams
+    ): Promise<sjcl.bn[]> {
+        const { hash, L } = g.hashParams
         const bytes = await expandXMD(hash, msg, dst, count * L)
-        const u = new Array<FieldElt>(count)
+        const u = new Array<sjcl.bn>()
         for (let i = 0; i < count; i++) {
             const j = i * L
             const array = Array.from(bytes.slice(j, j + L))
             const bitArr = sjcl.codec.bytes.toBits(array)
-            u[i as number] = new this.curve.field(sjcl.bn.fromBits(bitArr))
+            u.push(new g.curve.field(sjcl.bn.fromBits(bitArr)))
         }
         return u
     }
 
-    private sswu(u: FieldElt): sjcl.ecc.pointJac {
+    private static sswu(g: Group, u: sjcl.bn): Elt {
         // Simplified SWU method.
         // Appendix F.2 of draft-irtf-cfrg-hash-to-curve-14
         // https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#appendix-F.2
@@ -371,25 +300,25 @@ export class Group {
             a: A,
             b: B,
             field: { modulus: p }
-        } = this.curve
-        const Z = new this.curve.field(this.hashParams.Z)
-        const c2 = new this.curve.field(this.hashParams.c2) // c2 = sqrt(-Z)
+        } = g.curve
+        const Z = new g.curve.field(g.hashParams.Z)
+        const c2 = new g.curve.field(g.hashParams.c2)
         const c1 = p.sub(new sjcl.bn(3)).halveM().halveM() // c1 = (p-3)/4
-        const zero = new this.curve.field(0)
-        const one = new this.curve.field(1)
+        const zero = new g.curve.field(0)
+        const one = new g.curve.field(1)
 
-        function sgn(x: FieldElt): number {
+        function sgn(x: sjcl.bn): number {
             x.fullReduce()
             return x.getLimb(0) & 1
         }
-        function cmov(x: FieldElt, y: FieldElt, b: boolean): FieldElt {
+        function cmov(x: sjcl.bn, y: sjcl.bn, b: boolean): sjcl.bn {
             return b ? y : x
         }
         // Input: u and v, elements of F, where v != 0.
         // Output: (isQR, root), where
         //   isQR = True  and root = sqrt(u / v) if (u / v) is square in F, and
         //   isQR = False and root = sqrt(Z * (u / v)) otherwise.
-        function sqrt_ratio_3mod4(u: FieldElt, v: FieldElt): { isQR: boolean; root: FieldElt } {
+        function sqrt_ratio_3mod4(u: sjcl.bn, v: sjcl.bn): { isQR: boolean; root: sjcl.bn } {
             let tv1 = v.square() //         1. tv1 = v^2
             const tv2 = u.mul(v) //         2. tv2 = u * v
             tv1 = tv1.mul(tv2) //           3. tv1 = tv1 * tv2
@@ -433,10 +362,128 @@ export class Group {
         tv1 = tv1.mul(z)
         y = y.mul(tv1)
 
-        const point = new sjcl.ecc.pointJac(this.curve, x, y, z)
+        const point = new sjcl.ecc.pointJac(g.curve, x, y, z).toAffine()
         if (!point.isValid()) {
             throw new Error('point not in curve')
         }
-        return point
+        return new Elt(g, point)
+    }
+
+    static async hash(g: Group, msg: Uint8Array, dst: Uint8Array): Promise<Elt> {
+        const u = await Elt.hashToField(g, msg, dst, 2)
+        const Q0 = Elt.sswu(g, u[0])
+        const Q1 = Elt.sswu(g, u[1])
+        return Q0.add(Q1)
+    }
+}
+
+export type GroupID = typeof Group.ID[keyof typeof Group.ID]
+
+export class Group {
+    static ID = {
+        P256: 'P-256',
+        P384: 'P-384',
+        P521: 'P-521'
+    } as const
+
+    public readonly id: GroupID
+
+    public readonly curve: sjcl.ecc.curve
+
+    public readonly size: number
+
+    public readonly hashParams: {
+        // See Section F.2.1.2 at https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#appendix-F.2.1.2
+        readonly hash: string
+        readonly L: number
+        readonly Z: number
+        readonly c2: string // 2. c2 = sqrt(-Z) in GF(p).
+    }
+
+    constructor(gid: GroupID) {
+        switch (gid) {
+            case Group.ID.P256:
+                this.curve = sjcl.ecc.curves.c256
+                this.size = 32
+                this.hashParams = {
+                    hash: 'SHA-256',
+                    L: 48,
+                    Z: -10,
+                    // c2 = sqrt(-Z) in GF(p).
+                    c2: '0x25ac71c31e27646736870398ae7f554d8472e008b3aa2a49d332cbd81bcc3b80'
+                }
+                break
+            case Group.ID.P384:
+                this.curve = sjcl.ecc.curves.c384
+                this.size = 48
+                this.hashParams = {
+                    hash: 'SHA-384',
+                    L: 72,
+                    Z: -12,
+                    // c2 = sqrt(-Z) in GF(p).
+                    c2: '0x2accb4a656b0249c71f0500e83da2fdd7f98e383d68b53871f872fcb9ccb80c53c0de1f8a80f7e1914e2ec69f5a626b3'
+                }
+                break
+            case Group.ID.P521:
+                this.curve = sjcl.ecc.curves.c521
+                this.size = 66
+                this.hashParams = {
+                    hash: 'SHA-512',
+                    L: 98,
+                    Z: -4,
+                    // c2 = sqrt(-Z) in GF(p).
+                    c2: '0x2'
+                }
+                break
+            default:
+                throw errBadGroup(gid)
+        }
+        this.id = gid
+    }
+
+    static getID(id: string): GroupID {
+        switch (id) {
+            case 'P-256':
+                return Group.ID.P256
+            case 'P-384':
+                return Group.ID.P384
+            case 'P-521':
+                return Group.ID.P521
+            default:
+                throw errBadGroup(id)
+        }
+    }
+
+    newScalar(): Scalar {
+        return Scalar.new(this)
+    }
+
+    newElt(): Elt {
+        return this.identity()
+    }
+
+    identity(): Elt {
+        return Elt.new(this)
+    }
+
+    generator(): Elt {
+        return Elt.gen(this)
+    }
+
+    mulGen(s: Scalar): Elt {
+        return Elt.gen(this).mul(s)
+    }
+
+    randomScalar(): Promise<Scalar> {
+        const msg = crypto.getRandomValues(new Uint8Array(this.hashParams.L))
+        return Scalar.hash(this, msg, new Uint8Array())
+    }
+
+    hashToGroup(msg: Uint8Array, dst: Uint8Array): Promise<Elt> {
+        return Elt.hash(this, msg, dst)
+    }
+
+    hashToScalar(msg: Uint8Array, dst: Uint8Array): Promise<Scalar> {
+        return Scalar.hash(this, msg, dst)
     }
 }

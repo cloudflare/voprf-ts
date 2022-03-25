@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Group, GroupID, Scalar, SerializedElt, SerializedScalar } from './group.js'
+import { Group, GroupID, Scalar } from './group.js'
 import { joinAll, to16bits } from './util.js'
 
 import { DLEQProof } from './dleq.js'
@@ -50,11 +50,11 @@ export abstract class Oprf {
     private static getParams(id: SuiteID): [SuiteID, GroupID, string, number] {
         switch (id) {
             case Oprf.Suite.P256_SHA256:
-                return [id, GroupID.P256, 'SHA-256', 32]
+                return [id, Group.ID.P256, 'SHA-256', 32]
             case Oprf.Suite.P384_SHA384:
-                return [id, GroupID.P384, 'SHA-384', 48]
+                return [id, Group.ID.P384, 'SHA-384', 48]
             case Oprf.Suite.P521_SHA512:
-                return [id, GroupID.P521, 'SHA-512', 64]
+                return [id, Group.ID.P521, 'SHA-512', 64]
             default:
                 assertNever('Oprf.Suite', id)
         }
@@ -125,13 +125,13 @@ export abstract class Oprf {
     }
 }
 
-export class Blind extends SerializedScalar {
+export class Blind extends Uint8Array {
     readonly _BlindBrand = ''
 }
-export class Blinded extends SerializedElt {
+export class Blinded extends Uint8Array {
     readonly _BlindedBrand = ''
 }
-export class Evaluated extends SerializedElt {
+export class Evaluated extends Uint8Array {
     readonly _EvaluatedBrand = ''
 }
 
