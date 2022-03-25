@@ -4,6 +4,9 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import {
+    Evaluation,
+    EvaluationRequest,
+    FinalizeData,
     OPRFClient,
     OPRFServer,
     Oprf,
@@ -14,6 +17,8 @@ import {
     generatePublicKey,
     randomPrivateKey
 } from '../src/index.js'
+
+import { serdeClass } from './util.js'
 
 describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
     describe.each(Object.entries(Oprf.Suite))(`${modeName}`, (suiteName, id) => {
@@ -66,6 +71,10 @@ describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
 
             const success = await server.verifyFinalize(input, output)
             expect(success).toBe(true)
+
+            expect(serdeClass(FinalizeData, finData, client.gg)).toBe(true)
+            expect(serdeClass(EvaluationRequest, evalReq, client.gg)).toBe(true)
+            expect(serdeClass(Evaluation, evaluation, server.constructDLEQParams())).toBe(true)
         })
     })
 })

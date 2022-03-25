@@ -3,10 +3,10 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Blinded, Evaluated, Evaluation, EvaluationRequest, ModeID, Oprf, SuiteID } from './oprf.js'
+import { DLEQParams, DLEQProver } from './dleq.js'
 import { Elt, Scalar } from './group.js'
+import { Evaluation, EvaluationRequest, ModeID, Oprf, SuiteID } from './oprf.js'
 
-import { DLEQProver } from './dleq.js'
 import { ctEqual } from './util.js'
 
 class baseServer extends Oprf {
@@ -19,13 +19,13 @@ class baseServer extends Oprf {
         this.privateKey = privateKey
     }
 
-    protected doEvaluation(bl: Blinded, key: Uint8Array): Promise<Evaluated> {
+    protected doEvaluation(blinded: Elt, key: Uint8Array): Promise<Elt> {
         return this.supportsWebCryptoOPRF
-            ? this.evaluateWebCrypto(bl, key)
-            : Promise.resolve(this.evaluateSJCL(bl, key))
+            ? this.evaluateWebCrypto(blinded, key)
+            : Promise.resolve(this.evaluateSJCL(blinded, key))
     }
 
-    private async evaluateWebCrypto(bl: Blinded, key: Uint8Array): Promise<Evaluated> {
+    private async evaluateWebCrypto(blinded: Elt, key: Uint8Array): Promise<Elt> {
         const crKey = await crypto.subtle.importKey(
             'raw',
             key,
@@ -37,19 +37,13 @@ class baseServer extends Oprf {
             ['sign']
         )
         // webcrypto accepts only compressed points.
-        let compressed = Uint8Array.from(bl)
-        if (bl[0] === 0x04) {
-            const P = Elt.deserialize(this.gg, bl)
-            compressed = Uint8Array.from(P.serialize(true))
-        }
-        return new Evaluated(await crypto.subtle.sign('OPRF', crKey, compressed))
+        const compressed = blinded.serialize(true)
+        const evalBytes = new Uint8Array(await crypto.subtle.sign('OPRF', crKey, compressed))
+        return Elt.deserialize(this.gg, evalBytes)
     }
 
-    private evaluateSJCL(bl: Blinded, key: Uint8Array): Evaluated {
-        const P = Elt.deserialize(this.gg, bl)
-        const sk = Scalar.deserialize(this.gg, key)
-        const Z = P.mul(sk)
-        return new Evaluated(Z.serialize())
+    private evaluateSJCL(blinded: Elt, key: Uint8Array): Elt {
+        return blinded.mul(Scalar.deserialize(this.gg, key))
     }
 
     protected async secretFromInfo(info: Uint8Array): Promise<[Scalar, Scalar]> {
@@ -77,9 +71,12 @@ class baseServer extends Oprf {
         if (P.isIdentity()) {
             throw new Error('InvalidInputError')
         }
-        const blinded = new Blinded(P.serialize())
-        const evaluated = await this.doEvaluation(blinded, secret)
-        return this.coreFinalize(input, evaluated, info)
+        const evaluated = await this.doEvaluation(P, secret)
+        return this.coreFinalize(input, evaluated.serialize(true), info)
+    }
+
+    constructDLEQParams(): DLEQParams {
+        return { gg: this.gg, hash: this.hash, dst: '' }
     }
 }
 
@@ -105,12 +102,10 @@ export class VOPRFServer extends baseServer {
     }
     async evaluate(req: EvaluationRequest): Promise<Evaluation> {
         const e = await this.doEvaluation(req.blinded, this.privateKey)
-        const prover = new DLEQProver({ gg: this.gg, hash: this.hash, dst: '' })
+        const prover = new DLEQProver(this.constructDLEQParams())
         const skS = Scalar.deserialize(this.gg, this.privateKey)
         const pkS = this.gg.mulGen(skS)
-        const Q = Elt.deserialize(this.gg, req.blinded)
-        const kQ = Elt.deserialize(this.gg, e)
-        const proof = await prover.prove(skS, [this.gg.generator(), pkS], [Q, kQ])
+        const proof = await prover.prove(skS, [this.gg.generator(), pkS], [req.blinded, e])
         return new Evaluation(e, proof)
     }
     async fullEvaluate(input: Uint8Array): Promise<Uint8Array> {
@@ -129,11 +124,9 @@ export class POPRFServer extends baseServer {
         const [keyProof, evalSecret] = await this.secretFromInfo(info)
         const secret = evalSecret.serialize()
         const e = await this.doEvaluation(req.blinded, secret)
-        const prover = new DLEQProver({ gg: this.gg, hash: this.hash, dst: '' })
+        const prover = new DLEQProver(this.constructDLEQParams())
         const kG = this.gg.mulGen(keyProof)
-        const Q = Elt.deserialize(this.gg, e)
-        const kQ = Elt.deserialize(this.gg, req.blinded)
-        const proof = await prover.prove(keyProof, [this.gg.generator(), kG], [Q, kQ])
+        const proof = await prover.prove(keyProof, [this.gg.generator(), kG], [e, req.blinded])
         return new Evaluation(e, proof)
     }
     async fullEvaluate(input: Uint8Array, info = new Uint8Array(0)): Promise<Uint8Array> {

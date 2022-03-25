@@ -6,7 +6,7 @@
 // Implementation of batched discrete log equivalents proofs (DLEQ) as
 // described in https://www.ietf.org/id/draft-irtf-cfrg-voprf-09.html#name-discrete-log-equivalence-pr.
 import { Elt, Group, Scalar } from './group.js'
-import { joinAll, to16bits } from './util.js'
+import { checkSize, joinAll, to16bits, toU16LenPrefix } from './util.js'
 
 export interface DLEQParams {
     readonly gg: Group
@@ -32,7 +32,7 @@ async function computeComposites(
     const te = new TextEncoder()
     const Bm = b.serialize()
     const seedDST = te.encode(LABELS.Seed + params.dst)
-    const h1Input = joinAll([to16bits(Bm.length), Bm, to16bits(seedDST.length), seedDST])
+    const h1Input = joinAll([...toU16LenPrefix(Bm), ...toU16LenPrefix(seedDST)])
     const seed = new Uint8Array(await crypto.subtle.digest(params.hash, h1Input))
 
     const compositeLabel = te.encode(LABELS.Composite)
@@ -45,13 +45,10 @@ async function computeComposites(
         const Di = d.serialize()
 
         const h2Input = joinAll([
-            to16bits(seed.length),
-            seed,
+            ...toU16LenPrefix(seed),
             to16bits(i++),
-            to16bits(Ci.length),
-            Ci,
-            to16bits(Di.length),
-            Di,
+            ...toU16LenPrefix(Ci),
+            ...toU16LenPrefix(Di),
             compositeLabel
         ])
         const di = await params.gg.hashToScalar(h2Input, h2sDST)
@@ -78,7 +75,7 @@ function challenge(params: DLEQParams, points: [Elt, Elt, Elt, Elt, Elt]): Promi
     let h2Input = new Uint8Array()
     for (const p of points) {
         const P = p.serialize()
-        h2Input = joinAll([h2Input, to16bits(P.length), P])
+        h2Input = joinAll([h2Input, ...toU16LenPrefix(P)])
     }
     const te = new TextEncoder()
     h2Input = joinAll([h2Input, te.encode(LABELS.Challenge)])
@@ -86,17 +83,9 @@ function challenge(params: DLEQParams, points: [Elt, Elt, Elt, Elt, Elt]): Promi
     return params.gg.hashToScalar(h2Input, h2sDST)
 }
 
-export interface DLEQProof {
-    readonly params: DLEQParams
-    readonly c: Scalar
-    readonly s: Scalar
-    verify(p0: [Elt, Elt], p1: [Elt, Elt]): Promise<boolean>
-    verify_batch(p0: [Elt, Elt], p1: Array<[Elt, Elt]>): Promise<boolean>
-}
-
-class dleqProof implements DLEQProof {
+export class DLEQProof {
     constructor(
-        public readonly params: DLEQParams,
+        public readonly params: Required<DLEQParams>,
         public readonly c: Scalar,
         public readonly s: Scalar
     ) {}
@@ -115,6 +104,32 @@ class dleqProof implements DLEQProof {
         const t3 = M.mul2(this.s, Z, this.c)
         const c = await challenge(this.params, [p0[1], M, Z, t2, t3])
         return this.c.isEqual(c)
+    }
+
+    isEqual(p: DLEQProof): boolean {
+        return (
+            this.params.dst === p.params.dst &&
+            this.params.gg.id === p.params.gg.id &&
+            this.params.hash === p.params.hash &&
+            this.c.isEqual(p.c) &&
+            this.s.isEqual(p.s)
+        )
+    }
+
+    serialize(): Uint8Array {
+        return joinAll([this.c.serialize(), this.s.serialize()])
+    }
+
+    static size(params: DLEQParams): number {
+        return 2 * Scalar.size(params.gg)
+    }
+
+    static deserialize(params: Required<DLEQParams>, bytes: Uint8Array): DLEQProof {
+        checkSize(bytes, DLEQProof, params)
+        const n = Scalar.size(params.gg)
+        const c = Scalar.deserialize(params.gg, bytes.subarray(0, n))
+        const s = Scalar.deserialize(params.gg, bytes.subarray(n, 2 * n))
+        return new DLEQProof(params, c, s)
     }
 }
 
@@ -141,6 +156,6 @@ export class DLEQProver {
         const t3 = M.mul(rnd)
         const c = await challenge(this.params, [p0[1], M, Z, t2, t3])
         const s = rnd.sub(c.mul(key))
-        return new dleqProof(this.params, c, s)
+        return new DLEQProof(this.params, c, s)
     }
 }

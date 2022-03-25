@@ -5,7 +5,7 @@
 
 import { Elt, Scalar } from './group.js'
 import { ModeID, Oprf, SuiteID } from './oprf.js'
-import { joinAll, to16bits } from './util.js'
+import { joinAll, toU16LenPrefix } from './util.js'
 
 export function getKeySizes(id: SuiteID): { Nsk: number; Npk: number } {
     const gg = Oprf.getGroup(id)
@@ -47,7 +47,7 @@ export async function derivePrivateKey(
     info: Uint8Array
 ): Promise<Uint8Array> {
     const gg = Oprf.getGroup(id)
-    const deriveInput = joinAll([seed, to16bits(info.length), info])
+    const deriveInput = joinAll([seed, ...toU16LenPrefix(info)])
     let counter = 0
     let priv: Scalar
 

@@ -5,6 +5,8 @@
 
 import { DLEQParams, DLEQProof, DLEQProver, Elt, Group, Scalar } from '../src/index.js'
 
+import { serdeClass } from './util.js'
+
 describe.each(Object.entries(Group.ID))('DLEQ', (groupName, id) => {
     const gg = new Group(id)
     const params: DLEQParams = { gg, hash: 'SHA-256', dst: 'domain-sep' }
@@ -57,6 +59,11 @@ describe.each(Object.entries(Group.ID))('DLEQ', (groupName, id) => {
             const badKey = await gg.randomScalar()
             const badProof: DLEQProof = await Peggy.prove(badKey, [P, kP], [Q, kQ])
             expect(await badProof.verify([P, kP], [Q, kQ])).toBe(false)
+        })
+
+        it(`serde/${i}`, async () => {
+            expect(serdeClass(DLEQProof, proof, params)).toBe(true)
+            expect(serdeClass(DLEQProof, proofBatched, params)).toBe(true)
         })
     })
 })

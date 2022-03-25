@@ -4,7 +4,6 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import {
-    Blind,
     ModeID,
     OPRFClient,
     OPRFServer,
@@ -106,9 +105,9 @@ describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]
                         // inject the blind value given by the test vector.
                         for (const c of [OPRFClient, VOPRFClient, wrapPOPRFClient]) {
                             jest.spyOn(c.prototype, 'randomBlinder').mockImplementation(() => {
-                                const blind = new Blind(fromHex(vi.Blind))
-                                const scalar = Scalar.deserialize(Oprf.getGroup(id), blind)
-                                return Promise.resolve({ scalar, blind })
+                                return Promise.resolve(
+                                    Scalar.deserialize(Oprf.getGroup(id), fromHex(vi.Blind))
+                                )
                             })
                         }
 
@@ -120,13 +119,13 @@ describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]
 
                         const input = fromHex(vi.Input)
                         const [finData, evalReq] = await client.blind(input)
-                        expect(toHex(finData.blind)).toEqual(vi.Blind)
-                        expect(toHex(evalReq.blinded)).toEqual(vi.BlindedElement)
+                        expect(toHex(finData.blind.serialize())).toEqual(vi.Blind)
+                        expect(toHex(evalReq.blinded.serialize(true))).toEqual(vi.BlindedElement)
 
-                        const evaluation = await server.evaluate(evalReq)
-                        expect(toHex(evaluation.element)).toEqual(vi.EvaluationElement)
+                        const ev = await server.evaluate(evalReq)
+                        expect(toHex(ev.evaluated.serialize(true))).toEqual(vi.EvaluationElement)
 
-                        const output = await client.finalize(finData, evaluation)
+                        const output = await client.finalize(finData, ev)
                         expect(toHex(output)).toEqual(vi.Output)
 
                         const serverCheckOutput = await server.verifyFinalize(input, output)
