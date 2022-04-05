@@ -55,7 +55,7 @@ describe.each(Object.entries(Oprf.Suite))('supportsWebCrypto', (name, id) => {
         const server = new OPRFServer(id, privateKey)
         const client = new OPRFClient(id)
         const input = te.encode('This is the client input')
-        const [, reqEval] = await client.blind(input)
+        const [, reqEval] = await client.blind([input])
 
         server.supportsWebCryptoOPRF = false
         const ev0 = await server.evaluate(reqEval)

@@ -5,12 +5,19 @@
 
 import { DLEQParams, DLEQProof } from './dleq.js'
 import { Elt, Group, GroupID, Scalar } from './group.js'
-import { checkSize, fromU16LenPrefix, joinAll, toU16LenPrefix } from './util.js'
+import {
+    fromU16LenPrefixClass,
+    fromU16LenPrefixUint8Array,
+    joinAll,
+    toU16LenPrefix,
+    toU16LenPrefixClass,
+    toU16LenPrefixUint8Array
+} from './util.js'
 
 export type ModeID = typeof Oprf.Mode[keyof typeof Oprf.Mode]
 export type SuiteID = typeof Oprf.Suite[keyof typeof Oprf.Suite]
 
-function assertNever(name: string, x: never): never {
+function assertNever(name: string, x: unknown): never {
     throw new Error(`unexpected ${name} identifier: ${x}`)
 }
 
@@ -123,97 +130,100 @@ export abstract class Oprf {
 }
 
 export class Evaluation {
-    constructor(public readonly evaluated: Elt, public readonly proof?: DLEQProof) {}
+    constructor(
+        public readonly mode: ModeID,
+        public readonly evaluated: Array<Elt>,
+        public readonly proof?: DLEQProof
+    ) {}
 
     serialize(): Uint8Array {
+        let proofBytes = new Uint8Array()
+        if (this.proof && (this.mode == Oprf.Mode.VOPRF || this.mode == Oprf.Mode.POPRF)) {
+            proofBytes = this.proof.serialize()
+        }
+
         return joinAll([
-            this.evaluated.serialize(true),
-            Uint8Array.from([this.proof ? 1 : 0]),
-            this.proof ? this.proof.serialize() : new Uint8Array()
+            ...toU16LenPrefixClass(this.evaluated),
+            Uint8Array.from([this.mode]),
+            proofBytes
         ])
     }
 
     isEqual(e: Evaluation): boolean {
-        if ((this.proof && !e.proof) || (!this.proof && e.proof)) {
+        if (this.mode !== e.mode || (this.proof && !e.proof) || (!this.proof && e.proof)) {
             return false
         }
-        let res = this.evaluated.isEqual(e.evaluated)
+        let res = this.evaluated.every((x, i) => x.isEqual(e.evaluated[i as number]))
         if (this.proof && e.proof) {
             res &&= this.proof.isEqual(e.proof)
         }
         return res
     }
 
-    static size(params: DLEQParams): number {
-        return Elt.size(params.gg) + 1
-    }
-
     static deserialize(params: DLEQParams, bytes: Uint8Array): Evaluation {
-        checkSize(bytes, Evaluation, params)
-        const eltSize = Elt.size(params.gg)
-        const evaluated = Elt.deserialize(params.gg, bytes.subarray(0, eltSize))
+        const { head: evalList, tail } = fromU16LenPrefixClass(Elt, params.gg, bytes)
         let proof: DLEQProof | undefined
-        if (bytes[eltSize as number] === 1) {
-            const prSize = DLEQProof.size(params)
-            proof = DLEQProof.deserialize(params, bytes.subarray(1 + eltSize, 1 + eltSize + prSize))
+        const prSize = DLEQProof.size(params)
+        const proofBytes = tail.subarray(1, 1 + prSize)
+        const mode = tail[0]
+        switch (mode) {
+            case Oprf.Mode.OPRF: // no proof exists.
+                break
+            case Oprf.Mode.VOPRF:
+            case Oprf.Mode.POPRF:
+                proof = DLEQProof.deserialize(params, proofBytes)
+                break
+            default:
+                assertNever('Oprf.Mode', mode)
         }
-        return new Evaluation(evaluated, proof)
+        return new Evaluation(mode, evalList, proof)
     }
 }
 
 export class EvaluationRequest {
-    constructor(public readonly blinded: Elt) {}
+    constructor(public readonly blinded: Array<Elt>) {}
 
     serialize(): Uint8Array {
-        return this.blinded.serialize(true)
+        return joinAll(toU16LenPrefixClass(this.blinded))
     }
 
     isEqual(e: EvaluationRequest): boolean {
-        return this.blinded.isEqual(e.blinded)
-    }
-
-    static size(g: Group): number {
-        return Elt.size(g)
+        return this.blinded.every((x, i) => x.isEqual(e.blinded[i as number]))
     }
 
     static deserialize(g: Group, bytes: Uint8Array): EvaluationRequest {
-        checkSize(bytes, EvaluationRequest, g)
-        return new EvaluationRequest(Elt.deserialize(g, bytes))
+        const { head: blindedList } = fromU16LenPrefixClass(Elt, g, bytes)
+        return new EvaluationRequest(blindedList)
     }
 }
 
 export class FinalizeData {
     constructor(
-        public readonly input: Uint8Array,
-        public readonly blind: Scalar,
+        public readonly inputs: Array<Uint8Array>,
+        public readonly blinds: Array<Scalar>,
         public readonly evalReq: EvaluationRequest
     ) {}
 
     serialize(): Uint8Array {
         return joinAll([
-            ...toU16LenPrefix(this.input),
-            this.blind.serialize(),
+            ...toU16LenPrefixUint8Array(this.inputs),
+            ...toU16LenPrefixClass(this.blinds),
             this.evalReq.serialize()
         ])
     }
+
     isEqual(f: FinalizeData): boolean {
         return (
-            this.input.toString() === f.input.toString() &&
-            this.blind.isEqual(f.blind) &&
+            this.inputs.every((x, i) => x.toString() === f.inputs[i as number].toString()) &&
+            this.blinds.every((x, i) => x.isEqual(f.blinds[i as number])) &&
             this.evalReq.isEqual(f.evalReq)
         )
     }
-    static size(g: Group): number {
-        return 2 + Scalar.size(g) + EvaluationRequest.size(g)
-    }
 
     static deserialize(g: Group, bytes: Uint8Array): FinalizeData {
-        checkSize(bytes, FinalizeData, g)
-        const { head: input, tail } = fromU16LenPrefix(bytes)
-        const scSize = Scalar.size(g)
-        const erSize = EvaluationRequest.size(g)
-        const blind = Scalar.deserialize(g, tail.subarray(0, scSize))
-        const evalReq = EvaluationRequest.deserialize(g, tail.subarray(scSize, scSize + erSize))
-        return new FinalizeData(input, blind, evalReq)
+        const { head: inputs, tail: t0 } = fromU16LenPrefixUint8Array(bytes)
+        const { head: blinds, tail: t1 } = fromU16LenPrefixClass(Scalar, g, t0)
+        const evalReq = EvaluationRequest.deserialize(g, t1)
+        return new FinalizeData(inputs, blinds, evalReq)
     }
 }

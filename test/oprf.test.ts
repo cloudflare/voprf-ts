@@ -51,7 +51,7 @@ describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
             // Client
             // blind, blindedElement = Blind(input)
             const input = new TextEncoder().encode('This is the client input')
-            const [finData, evalReq] = await client.blind(input)
+            const [finData, evalReq] = await client.blind([input])
             //             evalReq
             //       ------------------>>
             //                                              Server
@@ -64,12 +64,12 @@ describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
             // output = Finalize(finData, evaluation, info*)
             //
             const output = await client.finalize(finData, evaluation)
-            expect(output).toHaveLength(Oprf.getOprfSize(id))
+            expect(output[0]).toHaveLength(Oprf.getOprfSize(id))
 
             const serverOutput = await server.fullEvaluate(input)
-            expect(output).toStrictEqual(serverOutput)
+            expect(output[0]).toStrictEqual(serverOutput)
 
-            const success = await server.verifyFinalize(input, output)
+            const success = await server.verifyFinalize(input, output[0])
             expect(success).toBe(true)
 
             expect(serdeClass(FinalizeData, finData, client.gg)).toBe(true)

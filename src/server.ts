@@ -6,8 +6,7 @@
 import { DLEQParams, DLEQProver } from './dleq.js'
 import { Elt, Scalar } from './group.js'
 import { Evaluation, EvaluationRequest, ModeID, Oprf, SuiteID } from './oprf.js'
-
-import { ctEqual } from './util.js'
+import { ctEqual, zip } from './util.js'
 
 class baseServer extends Oprf {
     protected privateKey: Uint8Array
@@ -86,7 +85,10 @@ export class OPRFServer extends baseServer {
     }
 
     async evaluate(req: EvaluationRequest): Promise<Evaluation> {
-        return new Evaluation(await this.doEvaluation(req.blinded, this.privateKey))
+        return new Evaluation(
+            this.mode,
+            await Promise.all(req.blinded.map((b) => this.doEvaluation(b, this.privateKey)))
+        )
     }
     async fullEvaluate(input: Uint8Array): Promise<Uint8Array> {
         return this.doFullEvaluate(input)
@@ -101,12 +103,18 @@ export class VOPRFServer extends baseServer {
         super(Oprf.Mode.VOPRF, suite, privateKey)
     }
     async evaluate(req: EvaluationRequest): Promise<Evaluation> {
-        const e = await this.doEvaluation(req.blinded, this.privateKey)
+        const evalList = await Promise.all(
+            req.blinded.map((b) => this.doEvaluation(b, this.privateKey))
+        )
         const prover = new DLEQProver(this.constructDLEQParams())
         const skS = Scalar.deserialize(this.gg, this.privateKey)
         const pkS = this.gg.mulGen(skS)
-        const proof = await prover.prove(skS, [this.gg.generator(), pkS], [req.blinded, e])
-        return new Evaluation(e, proof)
+        const proof = await prover.prove_batch(
+            skS,
+            [this.gg.generator(), pkS],
+            zip(req.blinded, evalList)
+        )
+        return new Evaluation(this.mode, evalList, proof)
     }
     async fullEvaluate(input: Uint8Array): Promise<Uint8Array> {
         return this.doFullEvaluate(input)
@@ -123,11 +131,15 @@ export class POPRFServer extends baseServer {
     async evaluate(req: EvaluationRequest, info = new Uint8Array(0)): Promise<Evaluation> {
         const [keyProof, evalSecret] = await this.secretFromInfo(info)
         const secret = evalSecret.serialize()
-        const e = await this.doEvaluation(req.blinded, secret)
+        const evalList = await Promise.all(req.blinded.map((b) => this.doEvaluation(b, secret)))
         const prover = new DLEQProver(this.constructDLEQParams())
         const kG = this.gg.mulGen(keyProof)
-        const proof = await prover.prove(keyProof, [this.gg.generator(), kG], [e, req.blinded])
-        return new Evaluation(e, proof)
+        const proof = await prover.prove_batch(
+            keyProof,
+            [this.gg.generator(), kG],
+            zip(evalList, req.blinded)
+        )
+        return new Evaluation(this.mode, evalList, proof)
     }
     async fullEvaluate(input: Uint8Array, info = new Uint8Array(0)): Promise<Uint8Array> {
         return this.doFullEvaluate(input, info)
