@@ -20,13 +20,26 @@ import {
 
 import allVectors from './testdata/allVectors_v09.json'
 import { jest } from '@jest/globals'
+import { zip } from './util.js'
 
 function fromHex(x: string): Uint8Array {
     return Uint8Array.from(Buffer.from(x, 'hex'))
 }
 
+function fromHexList(x: string): Uint8Array[] {
+    return x.split(',').map((l) => fromHex(l))
+}
+
 function toHex(x: Uint8Array): string {
     return Buffer.from(x).toString('hex')
+}
+
+function toHexListUint8Array(x: Uint8Array[]): string {
+    return x.map((xi) => toHex(xi)).join(',')
+}
+
+function toHexListClass(x: { serialize(): Uint8Array }[]): string {
+    return toHexListUint8Array(x.map((xi) => xi.serialize()))
 }
 
 class wrapPOPRFServer extends POPRFServer {
@@ -46,8 +59,8 @@ class wrapPOPRFServer extends POPRFServer {
 class wrapPOPRFClient extends POPRFClient {
     info!: Uint8Array
 
-    blind(input: Uint8Array): ReturnType<OPRFClient['blind']> {
-        return super.blind(input)
+    blind(inputs: Uint8Array[]): ReturnType<OPRFClient['blind']> {
+        return super.blind(inputs)
     }
     finalize(...r: Parameters<OPRFClient['finalize']>): ReturnType<OPRFClient['finalize']> {
         return super.finalize(...r, this.info)
@@ -99,39 +112,40 @@ describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]
             const { vectors } = testVector
 
             describe.each(vectors)('vec$#', (vi: typeof vectors[number]) => {
-                if (vi.Batch === 1) {
-                    it('protocol', async () => {
-                        // Creates a mock for randomBlinder method to
-                        // inject the blind value given by the test vector.
-                        for (const c of [OPRFClient, VOPRFClient, wrapPOPRFClient]) {
-                            jest.spyOn(c.prototype, 'randomBlinder').mockImplementation(() => {
-                                return Promise.resolve(
-                                    Scalar.deserialize(Oprf.getGroup(id), fromHex(vi.Blind))
-                                )
-                            })
-                        }
+                it('protocol', async () => {
+                    // Creates a mock for randomBlinder method to
+                    // inject the blind value given by the test vector.
+                    for (const c of [OPRFClient, VOPRFClient, wrapPOPRFClient]) {
+                        let i = 0
+                        jest.spyOn(c.prototype, 'randomBlinder').mockImplementation(() => {
+                            return Promise.resolve(
+                                Scalar.deserialize(Oprf.getGroup(id), fromHexList(vi.Blind)[i++])
+                            )
+                        })
+                    }
 
-                        if (testVector.mode === Oprf.Mode.POPRF) {
-                            const info = fromHex((vi as any).Info as string) // eslint-disable-line @typescript-eslint/no-explicit-any
-                            ;(server as wrapPOPRFServer).info = info
-                            ;(client as wrapPOPRFClient).info = info
-                        }
+                    if (testVector.mode === Oprf.Mode.POPRF) {
+                        const info = fromHex((vi as any).Info as string) // eslint-disable-line @typescript-eslint/no-explicit-any
+                        ;(server as wrapPOPRFServer).info = info
+                        ;(client as wrapPOPRFClient).info = info
+                    }
 
-                        const input = fromHex(vi.Input)
-                        const [finData, evalReq] = await client.blind(input)
-                        expect(toHex(finData.blind.serialize())).toEqual(vi.Blind)
-                        expect(toHex(evalReq.blinded.serialize(true))).toEqual(vi.BlindedElement)
+                    const input = fromHexList(vi.Input)
+                    const [finData, evalReq] = await client.blind(input)
+                    expect(toHexListClass(finData.blinds)).toEqual(vi.Blind)
+                    expect(toHexListClass(evalReq.blinded)).toEqual(vi.BlindedElement)
 
-                        const ev = await server.evaluate(evalReq)
-                        expect(toHex(ev.evaluated.serialize(true))).toEqual(vi.EvaluationElement)
+                    const ev = await server.evaluate(evalReq)
+                    expect(toHexListClass(ev.evaluated)).toEqual(vi.EvaluationElement)
 
-                        const output = await client.finalize(finData, ev)
-                        expect(toHex(output)).toEqual(vi.Output)
+                    const output = await client.finalize(finData, ev)
+                    expect(toHexListUint8Array(output)).toEqual(vi.Output)
 
-                        const serverCheckOutput = await server.verifyFinalize(input, output)
-                        expect(serverCheckOutput).toBe(true)
-                    })
-                }
+                    const serverCheckOutput = zip(input, output).every(
+                        async (inout) => await server.verifyFinalize(inout[0], inout[1])
+                    )
+                    expect(serverCheckOutput).toBe(true)
+                })
             })
         })
     }
