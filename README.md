@@ -1,31 +1,92 @@
-# voprf-ts
-
-This is a TypeScript library for Oblivious Pseudorandom Functions (OPRF).
+[![NPM](https://img.shields.io/npm/v/@cloudflare/voprf-ts?style=plastic)](https://www.npmjs.com/package/@cloudflare/voprf-ts) [![NPM](https://img.shields.io/npm/l/@cloudflare/voprf-ts?style=plastic)](LICENSE.txt)
 
 [![NPM](https://nodei.co/npm/@cloudflare/voprf-ts.png)](https://www.npmjs.com/package/@cloudflare/voprf-ts)
 
-### Use
+# voprf-ts: A TypeScript Library for Oblivious Pseudorandom Functions (OPRF).
 
-Available at: [@cloudflare/voprf-ts](https://www.npmjs.com/package/@cloudflare/voprf-ts)
+An **Oblivious Pseudorandom Function (OPRF)** is a two-party protocol between Client and Server for computing the output of a Pseudorandom Function (PRF).
 
-```sh
- $ npm install @cloudflare/voprf-ts
+Server provides the PRF secret key, and the Client provides the PRF input.
+At the end of the protocol, the Client learns the PRF output without learning anything about the PRF secret key, and the server learns neither the PRF input nor output.
+
+A **verifiable OPRF (VOPRF)** ensures clients can verify that the server used a specific private key during the execution of the protocol.
+
+A **partially-oblivious (POPRF)** extends a VOPRF allowing Client and Server to provide public shared input to the PRF computation.
+
+This library supports all three modes:
+```js
+Oprf.Mode.OPRF
+Oprf.Mode.VOPRF
+Oprf.Mode.POPRF
+```
+and supports three suites corresponding to the underlying group and hash used:
+```js
+Oprf.Suite.P256_SHA256
+Oprf.Suite.P384_SHA384
+Oprf.Suite.P521_SHA512
 ```
 
-### Specification
+**Specification:** Complaint with IETF [draft-irtf-cfrg-voprf](https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf/) and tests vectors match with [v09](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-09).
 
-IETF draft [VOPRF v09](https://tools.ietf.org/html/draft-irtf-cfrg-voprf-09)
+### Usage
 
-### Test and Coverage
+#### Step 1
 
-```sh
- $ npm ci
- $ npm test
+First setup a client and a server. In this case, we use the VOPRF mode with suite P384-SHA384.
+
+```js
+import {
+    Oprf, VOPRFClient, VOPRFServer, generatePublicKey, randomPrivateKey
+} from '@cloudflare/voprf-ts';
+
+const suite = Oprf.Suite.P384_SHA384;
+const privateKey = await randomPrivateKey(suite);
+const publicKey = generatePublicKey(suite, privateKey);
+
+const server = new VOPRFServer(suite, privateKey);
+const client = new VOPRFClient(suite, publicKey);
 ```
 
-### Dependencies
+#### Step 2
 
-It uses the Stanford Javascript Crypto Library [sjcl](https://github.com/bitwiseshiftleft/sjcl). To enable support for elliptic curves a compilation step is required, which produces the necessary files inside the ./src/sjcl folder.
+Client prepares arbitrary input that will be evalated by Server, the blinding method produces an evaluation request, and some finalization data to be used later. Then, Client sends the evaluation request to the Server.
+
+```js
+const input = new TextEncoder().encode("This is the client's input");
+const [finData, evalReq] = await client.blind([input]);
+```
+
+#### Step 3
+
+Once Server received the evaluation request, it responds to the Client with an evaluation.
+
+```js
+const evaluation = await server.evaluate(evalReq);
+```
+
+#### Step 4
+
+Finally, Client can produce the output of the OPRF protocol using server's evaluation and the finalization data from the first step. If the mode is verifiable, this step ensures the internal proofs were valid; otherwise throws an Error.
+
+```js
+const output = await client.finalize(finData, evaluation);
+```
+
+### Development
+
+| Task | NPM scripts |
+|--|--|
+| Installing         | `$ npm ci`         |
+| Building           | `$ npm run build`  |
+| Unit Tests         | `$ npm run test`   |
+| Benchmarking       | `$ npm run bench`  |
+| Code Linting       | `$ npm run lint`   |
+| Code Formating     | `$ npm run format` |
+
+
+**Dependencies**
+
+It uses the Stanford Javascript Crypto Library [sjcl](https://github.com/bitwiseshiftleft/sjcl). Support for elliptic curves must be enabled by this compilation step, which produces the necessary files inside the [src/sjcl](./src/sjcl) folder.
 
 ```sh
  $ make -f sjcl.Makefile
@@ -33,4 +94,4 @@ It uses the Stanford Javascript Crypto Library [sjcl](https://github.com/bitwise
 
 ### License
 
-[BSD-3-Clause](LICENSE.txt)
+The project is licensed under the [BSD-3-Clause License](LICENSE.txt).
