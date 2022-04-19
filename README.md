@@ -4,14 +4,14 @@
 
 # voprf-ts: A TypeScript Library for Oblivious Pseudorandom Functions (OPRF).
 
-An **Oblivious Pseudorandom Function (OPRF)** is a two-party protocol between Client and Server for computing the output of a Pseudorandom Function (PRF).
+An **Oblivious Pseudorandom Function (OPRF)** is a two-party protocol between a client and server for computing the output of a Pseudorandom Function (PRF).
 
-Server provides the PRF secret key, and the Client provides the PRF input.
-At the end of the protocol, the Client learns the PRF output without learning anything about the PRF secret key, and the server learns neither the PRF input nor output.
+The server provides the PRF secret key, and the client provides the PRF input.
+At the end of the protocol, the client learns the PRF output without learning anything about the PRF secret key, and the server learns neither the PRF input nor output.
 
 A **verifiable OPRF (VOPRF)** ensures clients can verify that the server used a specific private key during the execution of the protocol.
 
-A **partially-oblivious (POPRF)** extends a VOPRF allowing Client and Server to provide public shared input to the PRF computation.
+A **partially-oblivious (POPRF)** extends a VOPRF allowing the client and server to provide public shared input to the PRF computation.
 
 This library supports all three modes:
 ```js
@@ -49,7 +49,7 @@ const client = new VOPRFClient(suite, publicKey);
 
 #### Step 2
 
-Client prepares arbitrary input that will be evalated by Server, the blinding method produces an evaluation request, and some finalization data to be used later. Then, Client sends the evaluation request to the Server.
+The client prepares arbitrary input that will be evaluated by the server, the blinding method produces an evaluation request, and some finalization data to be used later. Then, the client sends the evaluation request to the server.
 
 ```js
 const input = new TextEncoder().encode("This is the client's input");
@@ -58,7 +58,7 @@ const [finData, evalReq] = await client.blind([input]);
 
 #### Step 3
 
-Once Server received the evaluation request, it responds to the Client with an evaluation.
+Once the server received the evaluation request, it responds to the client with an evaluation.
 
 ```js
 const evaluation = await server.evaluate(evalReq);
@@ -66,7 +66,7 @@ const evaluation = await server.evaluate(evalReq);
 
 #### Step 4
 
-Finally, Client can produce the output of the OPRF protocol using server's evaluation and the finalization data from the first step. If the mode is verifiable, this step ensures the internal proofs were valid; otherwise throws an Error.
+Finally, the client can produce the output of the OPRF protocol using the server's evaluation and the finalization data from the first step. If the mode is verifiable, this step allows the client to check the proof that the server used the expected private key for the evaluation.
 
 ```js
 const output = await client.finalize(finData, evaluation);
@@ -86,7 +86,7 @@ const output = await client.finalize(finData, evaluation);
 
 **Dependencies**
 
-It uses the Stanford Javascript Crypto Library [sjcl](https://github.com/bitwiseshiftleft/sjcl). Support for elliptic curves must be enabled by this compilation step, which produces the necessary files inside the [src/sjcl](./src/sjcl) folder.
+This project uses the Stanford Javascript Crypto Library [sjcl](https://github.com/bitwiseshiftleft/sjcl). Support for elliptic curves must be enabled by this compilation step, which produces the necessary files inside the [src/sjcl](./src/sjcl) folder.
 
 ```sh
  $ make -f sjcl.Makefile
