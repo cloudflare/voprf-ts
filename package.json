@@ -23,6 +23,9 @@
     ],
     "homepage": "https://github.com/cloudflare/voprf-ts#readme",
     "repository": "github:cloudflare/voprf-ts",
+    "engines": {
+        "node": ">=16"
+    },
     "devDependencies": {
         "@peculiar/webcrypto": "1.3.2",
         "@types/benchmark": "2.1.1",
