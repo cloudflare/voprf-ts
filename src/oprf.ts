@@ -124,7 +124,7 @@ export abstract class Oprf {
             throw new Error('invalid info length')
         }
         const te = new TextEncoder()
-        const framedInfo = joinAll([te.encode('Info'), ...toU16LenPrefix(info)])
+        const framedInfo = joinAll([te.encode(Oprf.LABELS.InfoLabel), ...toU16LenPrefix(info)])
         return this.gg.hashToScalar(framedInfo, this.getDST(Oprf.LABELS.HashToScalarDST))
     }
 }
