@@ -26,7 +26,7 @@ Oprf.Suite.P384_SHA384
 Oprf.Suite.P521_SHA512
 ```
 
-**Specification:** Complaint with IETF [draft-irtf-cfrg-voprf](https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf/) and tests vectors match with [v09](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-09).
+**Specification:** Complaint with IETF [draft-irtf-cfrg-voprf](https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf/) and tests vectors match with [v10](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-10).
 
 ### Usage
 
