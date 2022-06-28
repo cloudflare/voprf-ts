@@ -35,7 +35,7 @@ export abstract class Oprf {
     } as const
 
     static LABELS = {
-        Version: 'VOPRF09-',
+        Version: 'VOPRF10-',
         FinalizeDST: 'Finalize',
         HashToGroupDST: 'HashToGroup-',
         HashToScalarDST: 'HashToScalar-',

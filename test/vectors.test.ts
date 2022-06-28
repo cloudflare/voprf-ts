@@ -18,7 +18,7 @@ import {
     generatePublicKey
 } from '../src/index.js'
 
-import allVectors from './testdata/allVectors_v09.json'
+import allVectors from './testdata/allVectors_v10.json'
 import { jest } from '@jest/globals'
 import { zip } from './util.js'
 
@@ -68,7 +68,7 @@ class wrapPOPRFClient extends POPRFClient {
 }
 
 // Test vectors from https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf
-// https://tools.ietf.org/html/draft-irtf-cfrg-voprf-09
+// https://tools.ietf.org/html/draft-irtf-cfrg-voprf-10
 describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]) => {
     const mode = testVector.mode as ModeID
     const id = testVector.suiteID as SuiteID
