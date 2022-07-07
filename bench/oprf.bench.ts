@@ -55,19 +55,19 @@ export async function benchOPRF(bs: Benchmark.Suite) {
             }
 
             const [finData, evalReq] = await client.blind([input])
-            const evaluatedElement = await server.evaluate(evalReq)
+            const evaluatedElement = await server.blindEvaluate(evalReq)
             const prefix = mode + '/' + suite + '/'
 
             bs.add(
-                prefix + 'blind   ',
+                prefix + 'blind    ',
                 asyncFn(() => client.blind([input]))
             )
             bs.add(
-                prefix + 'evaluate',
-                asyncFn(() => server.evaluate(evalReq))
+                prefix + 'blindEval',
+                asyncFn(() => server.blindEvaluate(evalReq))
             )
             bs.add(
-                prefix + 'finalize',
+                prefix + 'finalize ',
                 asyncFn(() => client.finalize(finData, evaluatedElement))
             )
         }

@@ -55,8 +55,8 @@ describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
             //             evalReq
             //       ------------------>>
             //                                              Server
-            //               evaluation = Evaluate(evalReq, info*)
-            const evaluation = await server.evaluate(evalReq)
+            //          evaluation = BlindEvaluate(evalReq, info*)
+            const evaluation = await server.blindEvaluate(evalReq)
             //            evaluation
             //       <<------------------
             //
@@ -66,7 +66,7 @@ describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
             const output = await client.finalize(finData, evaluation)
             expect(output[0]).toHaveLength(Oprf.getOprfSize(id))
 
-            const serverOutput = await server.fullEvaluate(input)
+            const serverOutput = await server.evaluate(input)
             expect(output[0]).toStrictEqual(serverOutput)
 
             const success = await server.verifyFinalize(input, output[0])

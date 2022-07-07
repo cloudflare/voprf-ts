@@ -22,11 +22,14 @@ class baseClient extends Oprf {
         const blinds = []
         for (const input of inputs) {
             const scalar = await this.randomBlinder()
-            const P = await this.gg.hashToGroup(input, this.getDST(Oprf.LABELS.HashToGroupDST))
-            if (P.isIdentity()) {
+            const inputElement = await this.gg.hashToGroup(
+                input,
+                this.getDST(Oprf.LABELS.HashToGroupDST)
+            )
+            if (inputElement.isIdentity()) {
                 throw new Error('InvalidInputError')
             }
-            eltList.push(P.mul(scalar))
+            eltList.push(inputElement.mul(scalar))
             blinds.push(scalar)
         }
         const evalReq = new EvaluationRequest(eltList)

@@ -58,10 +58,10 @@ describe.each(Object.entries(Oprf.Suite))('supportsWebCrypto', (name, id) => {
         const [, reqEval] = await client.blind([input])
 
         server.supportsWebCryptoOPRF = false
-        const ev0 = await server.evaluate(reqEval)
+        const ev0 = await server.blindEvaluate(reqEval)
 
         server.supportsWebCryptoOPRF = true
-        const ev1 = await server.evaluate(reqEval)
+        const ev1 = await server.blindEvaluate(reqEval)
 
         expect(ev0).toEqual(ev1)
     })

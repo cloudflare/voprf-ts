@@ -39,8 +39,8 @@ export async function voprfExample() {
     // Step 2: Once the server received the evaluation request, it responds to
     // the client with an evaluation.
     //
-    //               evaluation = Evaluate(evalReq, info*)
-    const evaluation = await server.evaluate(evalReq)
+    //          evaluation = BlindEvaluate(evalReq, info*)
+    const evaluation = await server.blindEvaluate(evalReq)
     //            evaluation
     //       <<------------------
     //

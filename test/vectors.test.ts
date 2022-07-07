@@ -18,7 +18,7 @@ import {
     generatePublicKey
 } from '../src/index.js'
 
-import allVectors from './testdata/allVectors_v10.json'
+import allVectors from './testdata/allVectors_v11.json'
 import { jest } from '@jest/globals'
 import { zip } from './util.js'
 
@@ -45,11 +45,13 @@ function toHexListClass(x: { serialize(): Uint8Array }[]): string {
 class wrapPOPRFServer extends POPRFServer {
     info!: Uint8Array
 
-    evaluate(...r: Parameters<OPRFServer['evaluate']>): ReturnType<OPRFServer['evaluate']> {
-        return super.evaluate(r[0], this.info)
+    blindEvaluate(
+        ...r: Parameters<OPRFServer['blindEvaluate']>
+    ): ReturnType<OPRFServer['blindEvaluate']> {
+        return super.blindEvaluate(r[0], this.info)
     }
-    async fullEvaluate(input: Uint8Array): Promise<Uint8Array> {
-        return super.fullEvaluate(input, this.info)
+    async evaluate(input: Uint8Array): Promise<Uint8Array> {
+        return super.evaluate(input, this.info)
     }
     async verifyFinalize(input: Uint8Array, output: Uint8Array): Promise<boolean> {
         return super.verifyFinalize(input, output, this.info)
@@ -68,7 +70,7 @@ class wrapPOPRFClient extends POPRFClient {
 }
 
 // Test vectors from https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf
-// https://tools.ietf.org/html/draft-irtf-cfrg-voprf-10
+// https://tools.ietf.org/html/draft-irtf-cfrg-voprf-11
 describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]) => {
     const mode = testVector.mode as ModeID
     const id = testVector.suiteID as SuiteID
@@ -135,7 +137,7 @@ describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]
                     expect(toHexListClass(finData.blinds)).toEqual(vi.Blind)
                     expect(toHexListClass(evalReq.blinded)).toEqual(vi.BlindedElement)
 
-                    const ev = await server.evaluate(evalReq)
+                    const ev = await server.blindEvaluate(evalReq)
                     expect(toHexListClass(ev.evaluated)).toEqual(vi.EvaluationElement)
 
                     const output = await client.finalize(finData, ev)
