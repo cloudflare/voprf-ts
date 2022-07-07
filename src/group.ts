@@ -79,7 +79,7 @@ async function expandXMD(
 }
 
 export class Scalar {
-    private constructor(public readonly g: Group, public readonly k: sjcl.bn) {}
+    private constructor(public readonly g: Group, private readonly k: sjcl.bn) {}
 
     static new(g: Group): Scalar {
         return new Scalar(g, new sjcl.bn(0))
@@ -95,31 +95,31 @@ export class Scalar {
 
     add(s: Scalar): Scalar {
         compat(this, s)
-        const c = this.k.add(s.k).mod(this.g.curve.r)
+        const c = this.k.add(s.k).mod(getCurveParams(this.g.id).r)
         c.normalize()
         return new Scalar(this.g, c)
     }
 
     sub(s: Scalar): Scalar {
         compat(this, s)
-        const c = this.k.sub(s.k).mod(this.g.curve.r)
+        const c = this.k.sub(s.k).mod(getCurveParams(this.g.id).r)
         c.normalize()
         return new Scalar(this.g, c)
     }
 
     mul(s: Scalar): Scalar {
         compat(this, s)
-        const c = this.k.mulmod(s.k, this.g.curve.r)
+        const c = this.k.mulmod(s.k, getCurveParams(this.g.id).r)
         c.normalize()
         return new Scalar(this.g, c)
     }
 
     inv(): Scalar {
-        return new Scalar(this.g, this.k.inverseMod(this.g.curve.r))
+        return new Scalar(this.g, this.k.inverseMod(getCurveParams(this.g.id).r))
     }
 
     serialize(): Uint8Array {
-        const k = this.k.mod(this.g.curve.r)
+        const k = this.k.mod(getCurveParams(this.g.id).r)
         k.normalize()
 
         const ab = sjcl.codec.arrayBuffer.fromBits(k.toBits(), false)
@@ -138,7 +138,7 @@ export class Scalar {
         const array = Array.from(bytes.subarray(0, g.size))
         const k = sjcl.bn.fromBits(sjcl.codec.bytes.toBits(array))
         k.normalize()
-        if (k.greaterEquals(g.curve.r)) {
+        if (k.greaterEquals(getCurveParams(g.id).r)) {
             throw errDeserialization(Scalar)
         }
         return new Scalar(g, k)
@@ -149,19 +149,23 @@ export class Scalar {
         const bytes = await expandXMD(hash, msg, dst, L)
         const array = Array.from(bytes)
         const bitArr = sjcl.codec.bytes.toBits(array)
-        const k = sjcl.bn.fromBits(bitArr).mod(g.curve.r)
+        const k = sjcl.bn.fromBits(bitArr).mod(getCurveParams(g.id).r)
         return new Scalar(g, k)
     }
 }
 
+interface InnerScalar {
+    readonly k: unknown
+}
+
 export class Elt {
-    private constructor(public readonly g: Group, public p: sjcl.ecc.point) {}
+    private constructor(public readonly g: Group, private readonly p: sjcl.ecc.point) {}
 
     static new(g: Group): Elt {
-        return new Elt(g, new sjcl.ecc.point(g.curve))
+        return new Elt(g, new sjcl.ecc.point(getCurveParams(g.id)))
     }
     static gen(g: Group): Elt {
-        return new Elt(g, g.curve.G)
+        return new Elt(g, getCurveParams(g.id).G)
     }
 
     isIdentity(): boolean {
@@ -189,13 +193,16 @@ export class Elt {
     }
     mul(s: Scalar): Elt {
         compat(this, s)
-        return new Elt(this.g, this.p.mult(s.k))
+        return new Elt(this.g, this.p.mult((s as unknown as InnerScalar).k))
     }
     mul2(k1: Scalar, a: Elt, k2: Scalar): Elt {
         compat(this, k1)
         compat(this, k2)
         compat(this, a)
-        return new Elt(this.g, this.p.mult2(k1.k, k2.k, a.p))
+        return new Elt(
+            this.g,
+            this.p.mult2((k1 as unknown as InnerScalar).k, (k2 as unknown as InnerScalar).k, a.p)
+        )
     }
     // Serializes an element in uncompressed form.
     private serUnComp(a: sjcl.ecc.point): Uint8Array {
@@ -239,15 +246,16 @@ export class Elt {
     private static deserComp(g: Group, bytes: Uint8Array): Elt {
         const array = Array.from(bytes.subarray(1))
         const bits = sjcl.codec.bytes.toBits(array)
-        const x = new g.curve.field(sjcl.bn.fromBits(bits))
-        const p = g.curve.field.modulus
+        const curve = getCurveParams(g.id)
+        const x = new curve.field(sjcl.bn.fromBits(bits))
+        const p = curve.field.modulus
         const exp = p.add(new sjcl.bn(1)).halveM().halveM()
-        let y = x.square().add(g.curve.a).mul(x).add(g.curve.b).power(exp)
+        let y = x.square().add(curve.a).mul(x).add(curve.b).power(exp)
         y.fullReduce()
         if ((bytes[0] & 1) !== (y.getLimb(0) & 1)) {
             y = p.sub(y).mod(p)
         }
-        const point = new sjcl.ecc.point(g.curve, new g.curve.field(x), new g.curve.field(y))
+        const point = new sjcl.ecc.point(curve, new curve.field(x), new curve.field(y))
         if (!point.isValid()) {
             throw errDeserialization(Elt)
         }
@@ -258,7 +266,8 @@ export class Elt {
     private static deserUnComp(g: Group, bytes: Uint8Array): Elt {
         const array = Array.from(bytes.subarray(1))
         const b = sjcl.codec.bytes.toBits(array)
-        const point = g.curve.fromBits(b)
+        const curve = getCurveParams(g.id)
+        const point = curve.fromBits(b)
         point.x.fullReduce()
         point.y.fullReduce()
         return new Elt(g, point)
@@ -285,6 +294,7 @@ export class Elt {
         dst: Uint8Array,
         count: number
     ): Promise<sjcl.bn[]> {
+        const curve = getCurveParams(g.id)
         const { hash, L } = g.hashParams
         const bytes = await expandXMD(hash, msg, dst, count * L)
         const u = new Array<sjcl.bn>()
@@ -292,7 +302,7 @@ export class Elt {
             const j = i * L
             const array = Array.from(bytes.slice(j, j + L))
             const bitArr = sjcl.codec.bytes.toBits(array)
-            u.push(new g.curve.field(sjcl.bn.fromBits(bitArr)))
+            u.push(new curve.field(sjcl.bn.fromBits(bitArr)))
         }
         return u
     }
@@ -301,16 +311,17 @@ export class Elt {
         // Simplified SWU method.
         // Appendix F.2 of draft-irtf-cfrg-hash-to-curve-14
         // https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#appendix-F.2
+        const curve = getCurveParams(g.id)
         const {
             a: A,
             b: B,
             field: { modulus: p }
-        } = g.curve
-        const Z = new g.curve.field(g.hashParams.Z)
-        const c2 = new g.curve.field(g.hashParams.c2)
+        } = curve
+        const Z = new curve.field(g.hashParams.Z)
+        const c2 = new curve.field(g.hashParams.c2)
         const c1 = p.sub(new sjcl.bn(3)).halveM().halveM() // c1 = (p-3)/4
-        const zero = new g.curve.field(0)
-        const one = new g.curve.field(1)
+        const zero = new curve.field(0)
+        const one = new curve.field(1)
 
         function sgn(x: sjcl.bn): number {
             x.fullReduce()
@@ -367,7 +378,7 @@ export class Elt {
         tv1 = tv1.mul(z)
         y = y.mul(tv1)
 
-        const point = new sjcl.ecc.pointJac(g.curve, x, y, z).toAffine()
+        const point = new sjcl.ecc.pointJac(curve, x, y, z).toAffine()
         if (!point.isValid()) {
             throw new Error('point not in curve')
         }
@@ -382,6 +393,28 @@ export class Elt {
     }
 }
 
+interface CurveParams {
+    G: sjcl.ecc.point
+    a: sjcl.bn
+    b: sjcl.bn
+    r: sjcl.bn
+    field: any
+    fromBits(_: any): sjcl.ecc.point
+}
+
+function getCurveParams(gid: GroupID): CurveParams {
+    switch (gid) {
+        case Group.ID.P256:
+            return sjcl.ecc.curves.c256
+        case Group.ID.P384:
+            return sjcl.ecc.curves.c384
+        case Group.ID.P521:
+            return sjcl.ecc.curves.c521
+        default:
+            throw errBadGroup(gid)
+    }
+}
+
 export type GroupID = typeof Group.ID[keyof typeof Group.ID]
 
 export class Group {
@@ -392,8 +425,6 @@ export class Group {
     } as const
 
     public readonly id: GroupID
-
-    public readonly curve: sjcl.ecc.curve
 
     public readonly size: number
 
@@ -408,7 +439,6 @@ export class Group {
     constructor(gid: GroupID) {
         switch (gid) {
             case Group.ID.P256:
-                this.curve = sjcl.ecc.curves.c256
                 this.size = 32
                 this.hashParams = {
                     hash: 'SHA-256',
@@ -419,7 +449,6 @@ export class Group {
                 }
                 break
             case Group.ID.P384:
-                this.curve = sjcl.ecc.curves.c384
                 this.size = 48
                 this.hashParams = {
                     hash: 'SHA-384',
@@ -430,7 +459,6 @@ export class Group {
                 }
                 break
             case Group.ID.P521:
-                this.curve = sjcl.ecc.curves.c521
                 this.size = 66
                 this.hashParams = {
                     hash: 'SHA-512',
