@@ -19,10 +19,8 @@ async function examples() {
 }
 
 examples()
-    .then(() => {
-        process.exit(0)
-    })
-    .catch((err) => {
-        console.error(err)
+    .catch((e: Error) => {
+        console.log(`Error: ${e.message}`)
+        console.log(`Stack: ${e.stack}`)
         process.exit(1)
     })

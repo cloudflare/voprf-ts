@@ -41,8 +41,8 @@ export async function poprfExample() {
     // Step 2: Once the server received the evaluation request, it responds to
     // the client with an evaluation.
     //
-    //               evaluation = Evaluate(evalReq, info*)
-    const evaluation = await server.evaluate(evalReq, infoBytes)
+    //          evaluation = BlindEvaluate(evalReq, info*)
+    const evaluation = await server.blindEvaluate(evalReq)
     //            evaluation
     //       <<------------------
     //

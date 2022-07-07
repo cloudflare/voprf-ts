@@ -15,19 +15,19 @@ if (typeof crypto === 'undefined') {
 async function bench() {
     const bs = new Benchmark.Suite()
 
-    for (const f of [benchGroup, benchOPRF]) {
-        await f(bs)
-    }
+    await benchOPRF(bs);
+    await benchGroup(bs);
 
-    try {
-        bs.on('cycle', (ev: Benchmark.Event) => {
-            console.log(String(ev.target))
-        })
-        bs.run({ async: false })
-    } catch (e: unknown) {
-        console.log('Error: ' + (e as Error).message)
-        console.log('Stack: ' + (e as Error).stack)
-    }
+    bs.on('cycle', (ev: Benchmark.Event) => {
+        console.log(String(ev.target))
+    })
+
+    bs.run({ async: false })
 }
 
 bench()
+    .catch((e: Error) => {
+        console.log(`Error: ${e.message}`)
+        console.log(`Stack: ${e.stack}`)
+        process.exit(1)
+    })
