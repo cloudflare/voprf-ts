@@ -26,7 +26,7 @@ Oprf.Suite.P384_SHA384
 Oprf.Suite.P521_SHA512
 ```
 
-**Specification:** Complaint with IETF [draft-irtf-cfrg-voprf](https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf/) and tests vectors match with [v10](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-10).
+**Specification:** Complaint with IETF [draft-irtf-cfrg-voprf](https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf/) and tests vectors match with [v11](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-11).
 
 ### Usage
 
@@ -66,7 +66,7 @@ const evaluation = await server.evaluate(evalReq);
 
 #### Step 4
 
-Finally, the client can produce the output of the OPRF protocol using the server's evaluation and the finalization data from the first step. If the mode is verifiable, this step allows the client to check the proof that the server used the expected private key for the evaluation.
+Finally, the client can produce the output of the OPRF protocol using the server's evaluation and the finalization data from the second step. If the mode is verifiable, this step allows the client to check the proof that the server used the expected private key for the evaluation.
 
 ```js
 const output = await client.finalize(finData, evaluation);

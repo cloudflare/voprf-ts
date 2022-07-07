@@ -3,29 +3,22 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import Benchmark from 'benchmark'
-import { benchGroup } from './group.bench.js'
-import { benchOPRF } from './oprf.bench.js'
+import { oprfExample } from './oprf.js'
+import { poprfExample } from './poprf.js'
+import { voprfExample } from './voprf.js'
 import { webcrypto } from 'node:crypto'
 
 if (typeof crypto === 'undefined') {
     global.crypto = webcrypto as unknown as Crypto
 }
 
-async function bench() {
-    const bs = new Benchmark.Suite()
-
-    await benchOPRF(bs)
-    await benchGroup(bs)
-
-    bs.on('cycle', (ev: Benchmark.Event) => {
-        console.log(String(ev.target))
-    })
-
-    bs.run({ async: false })
+async function examples() {
+    await oprfExample()
+    await voprfExample()
+    await poprfExample()
 }
 
-bench().catch((e: Error) => {
+examples().catch((e: Error) => {
     console.log(`Error: ${e.message}`)
     console.log(`Stack: ${e.stack}`)
     process.exit(1)

@@ -102,7 +102,7 @@ export abstract class Oprf {
 
     protected async coreFinalize(
         input: Uint8Array,
-        element: Uint8Array,
+        issuedElement: Uint8Array,
         info: Uint8Array
     ): Promise<Uint8Array> {
         let hasInfo: Uint8Array[] = []
@@ -113,7 +113,7 @@ export abstract class Oprf {
         const hashInput = joinAll([
             ...toU16LenPrefix(input),
             ...hasInfo,
-            ...toU16LenPrefix(element),
+            ...toU16LenPrefix(issuedElement),
             new TextEncoder().encode(Oprf.LABELS.FinalizeDST)
         ])
         return new Uint8Array(await crypto.subtle.digest(this.hash, hashInput))
