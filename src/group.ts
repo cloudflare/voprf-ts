@@ -78,8 +78,25 @@ async function expandXMD(
     return pseudo.slice(0, numBytes)
 }
 
+function getCurve(gid: GroupID): sjcl.ecc.curve {
+    switch (gid) {
+        case Group.ID.P256:
+            return sjcl.ecc.curves.c256
+        case Group.ID.P384:
+            return sjcl.ecc.curves.c384
+        case Group.ID.P521:
+            return sjcl.ecc.curves.c521
+        default:
+            throw errBadGroup(gid)
+    }
+}
+
 export class Scalar {
-    private constructor(public readonly g: Group, private readonly k: sjcl.bn) {}
+    private readonly order: sjcl.bn
+
+    private constructor(public readonly g: Group, private readonly k: sjcl.bn) {
+        this.order = getCurve(this.g.id).r
+    }
 
     static new(g: Group): Scalar {
         return new Scalar(g, new sjcl.bn(0))
@@ -95,31 +112,31 @@ export class Scalar {
 
     add(s: Scalar): Scalar {
         compat(this, s)
-        const c = this.k.add(s.k).mod(getCurveParams(this.g.id).r)
+        const c = this.k.add(s.k).mod(this.order)
         c.normalize()
         return new Scalar(this.g, c)
     }
 
     sub(s: Scalar): Scalar {
         compat(this, s)
-        const c = this.k.sub(s.k).mod(getCurveParams(this.g.id).r)
+        const c = this.k.sub(s.k).mod(this.order)
         c.normalize()
         return new Scalar(this.g, c)
     }
 
     mul(s: Scalar): Scalar {
         compat(this, s)
-        const c = this.k.mulmod(s.k, getCurveParams(this.g.id).r)
+        const c = this.k.mulmod(s.k, this.order)
         c.normalize()
         return new Scalar(this.g, c)
     }
 
     inv(): Scalar {
-        return new Scalar(this.g, this.k.inverseMod(getCurveParams(this.g.id).r))
+        return new Scalar(this.g, this.k.inverseMod(this.order))
     }
 
     serialize(): Uint8Array {
-        const k = this.k.mod(getCurveParams(this.g.id).r)
+        const k = this.k.mod(this.order)
         k.normalize()
 
         const ab = sjcl.codec.arrayBuffer.fromBits(k.toBits(), false)
@@ -138,18 +155,18 @@ export class Scalar {
         const array = Array.from(bytes.subarray(0, g.size))
         const k = sjcl.bn.fromBits(sjcl.codec.bytes.toBits(array))
         k.normalize()
-        if (k.greaterEquals(getCurveParams(g.id).r)) {
+        if (k.greaterEquals(getCurve(g.id).r)) {
             throw errDeserialization(Scalar)
         }
         return new Scalar(g, k)
     }
 
     static async hash(g: Group, msg: Uint8Array, dst: Uint8Array): Promise<Scalar> {
-        const { hash, L } = g.hashParams
+        const { hash, L } = getHashParams(g.id)
         const bytes = await expandXMD(hash, msg, dst, L)
         const array = Array.from(bytes)
         const bitArr = sjcl.codec.bytes.toBits(array)
-        const k = sjcl.bn.fromBits(bitArr).mod(getCurveParams(g.id).r)
+        const k = sjcl.bn.fromBits(bitArr).mod(getCurve(g.id).r)
         return new Scalar(g, k)
     }
 }
@@ -158,14 +175,73 @@ interface InnerScalar {
     readonly k: unknown
 }
 
+interface SSWUParams {
+    // See Section F.2.1.2 at https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#appendix-F.2.1.2
+    Z: sjcl.bn
+    c1: sjcl.bn // 1. c1 = (p-3)/4
+    c2: sjcl.bn // 2. c2 = sqrt(-Z) in GF(p).
+}
+
+function getSSWUParams(gid: GroupID): SSWUParams {
+    const curve = getCurve(gid)
+    let Z
+    let c2
+    switch (gid) {
+        case Group.ID.P256:
+            Z = -10
+            // c2 = sqrt(-Z) in GF(p).
+            c2 = '0x25ac71c31e27646736870398ae7f554d8472e008b3aa2a49d332cbd81bcc3b80'
+
+            break
+        case Group.ID.P384:
+            Z = -12
+            // c2 = sqrt(-Z) in GF(p).
+            c2 =
+                '0x2accb4a656b0249c71f0500e83da2fdd7f98e383d68b53871f872fcb9ccb80c53c0de1f8a80f7e1914e2ec69f5a626b3'
+            break
+        case Group.ID.P521:
+            Z = -4
+            // c2 = sqrt(-Z) in GF(p).
+            c2 = '0x2'
+            break
+        default:
+            throw errBadGroup(gid)
+    }
+
+    const p = curve.field.modulus
+    const c1 = p.sub(new sjcl.bn(3)).halveM().halveM()
+    Z = new curve.field(Z)
+    c2 = new curve.field(c2)
+
+    return { Z, c1, c2 }
+}
+
+interface HashParams {
+    hash: string
+    L: number
+}
+
+function getHashParams(gid: GroupID): HashParams {
+    switch (gid) {
+        case Group.ID.P256:
+            return { hash: 'SHA-256', L: 48 }
+        case Group.ID.P384:
+            return { hash: 'SHA-384', L: 72 }
+        case Group.ID.P521:
+            return { hash: 'SHA-512', L: 98 }
+        default:
+            throw errBadGroup(gid)
+    }
+}
+
 export class Elt {
     private constructor(public readonly g: Group, private readonly p: sjcl.ecc.point) {}
 
     static new(g: Group): Elt {
-        return new Elt(g, new sjcl.ecc.point(getCurveParams(g.id)))
+        return new Elt(g, new sjcl.ecc.point(getCurve(g.id)))
     }
     static gen(g: Group): Elt {
-        return new Elt(g, getCurveParams(g.id).G)
+        return new Elt(g, getCurve(g.id).G)
     }
 
     isIdentity(): boolean {
@@ -246,7 +322,7 @@ export class Elt {
     private static deserComp(g: Group, bytes: Uint8Array): Elt {
         const array = Array.from(bytes.subarray(1))
         const bits = sjcl.codec.bytes.toBits(array)
-        const curve = getCurveParams(g.id)
+        const curve = getCurve(g.id)
         const x = new curve.field(sjcl.bn.fromBits(bits))
         const p = curve.field.modulus
         const exp = p.add(new sjcl.bn(1)).halveM().halveM()
@@ -266,7 +342,7 @@ export class Elt {
     private static deserUnComp(g: Group, bytes: Uint8Array): Elt {
         const array = Array.from(bytes.subarray(1))
         const b = sjcl.codec.bytes.toBits(array)
-        const curve = getCurveParams(g.id)
+        const curve = getCurve(g.id)
         const point = curve.fromBits(b)
         point.x.fullReduce()
         point.y.fullReduce()
@@ -294,8 +370,8 @@ export class Elt {
         dst: Uint8Array,
         count: number
     ): Promise<sjcl.bn[]> {
-        const curve = getCurveParams(g.id)
-        const { hash, L } = g.hashParams
+        const curve = getCurve(g.id)
+        const { hash, L } = getHashParams(g.id)
         const bytes = await expandXMD(hash, msg, dst, count * L)
         const u = new Array<sjcl.bn>()
         for (let i = 0; i < count; i++) {
@@ -311,15 +387,9 @@ export class Elt {
         // Simplified SWU method.
         // Appendix F.2 of draft-irtf-cfrg-hash-to-curve-14
         // https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#appendix-F.2
-        const curve = getCurveParams(g.id)
-        const {
-            a: A,
-            b: B,
-            field: { modulus: p }
-        } = curve
-        const Z = new curve.field(g.hashParams.Z)
-        const c2 = new curve.field(g.hashParams.c2)
-        const c1 = p.sub(new sjcl.bn(3)).halveM().halveM() // c1 = (p-3)/4
+        const curve = getCurve(g.id)
+        const { a: A, b: B } = curve
+        const { Z, c1, c2 } = getSSWUParams(g.id)
         const zero = new curve.field(0)
         const one = new curve.field(1)
 
@@ -393,28 +463,6 @@ export class Elt {
     }
 }
 
-interface CurveParams {
-    G: sjcl.ecc.point
-    a: sjcl.bn
-    b: sjcl.bn
-    r: sjcl.bn
-    field: any
-    fromBits(_: any): sjcl.ecc.point
-}
-
-function getCurveParams(gid: GroupID): CurveParams {
-    switch (gid) {
-        case Group.ID.P256:
-            return sjcl.ecc.curves.c256
-        case Group.ID.P384:
-            return sjcl.ecc.curves.c384
-        case Group.ID.P521:
-            return sjcl.ecc.curves.c521
-        default:
-            throw errBadGroup(gid)
-    }
-}
-
 export type GroupID = typeof Group.ID[keyof typeof Group.ID]
 
 export class Group {
@@ -428,45 +476,16 @@ export class Group {
 
     public readonly size: number
 
-    public readonly hashParams: {
-        // See Section F.2.1.2 at https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#appendix-F.2.1.2
-        readonly hash: string
-        readonly L: number
-        readonly Z: number
-        readonly c2: string // 2. c2 = sqrt(-Z) in GF(p).
-    }
-
     constructor(gid: GroupID) {
         switch (gid) {
             case Group.ID.P256:
                 this.size = 32
-                this.hashParams = {
-                    hash: 'SHA-256',
-                    L: 48,
-                    Z: -10,
-                    // c2 = sqrt(-Z) in GF(p).
-                    c2: '0x25ac71c31e27646736870398ae7f554d8472e008b3aa2a49d332cbd81bcc3b80'
-                }
                 break
             case Group.ID.P384:
                 this.size = 48
-                this.hashParams = {
-                    hash: 'SHA-384',
-                    L: 72,
-                    Z: -12,
-                    // c2 = sqrt(-Z) in GF(p).
-                    c2: '0x2accb4a656b0249c71f0500e83da2fdd7f98e383d68b53871f872fcb9ccb80c53c0de1f8a80f7e1914e2ec69f5a626b3'
-                }
                 break
             case Group.ID.P521:
                 this.size = 66
-                this.hashParams = {
-                    hash: 'SHA-512',
-                    L: 98,
-                    Z: -4,
-                    // c2 = sqrt(-Z) in GF(p).
-                    c2: '0x2'
-                }
                 break
             default:
                 throw errBadGroup(gid)
@@ -508,7 +527,7 @@ export class Group {
     }
 
     randomScalar(): Promise<Scalar> {
-        const msg = crypto.getRandomValues(new Uint8Array(this.hashParams.L))
+        const msg = crypto.getRandomValues(new Uint8Array(this.size))
         return Scalar.hash(this, msg, new Uint8Array())
     }
 

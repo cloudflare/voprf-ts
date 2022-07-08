@@ -29,8 +29,6 @@ export async function benchGroup(bs: Benchmark.Suite) {
 
         const prefix = gg.id + '/'
 
-        bs.add(prefix + 'mixadd      ', () => P.p.toJac().add(Q.p))
-        bs.add(prefix + 'mixaddAf    ', () => P.p.toJac().add(Q.p).toAffine())
         bs.add(prefix + 'add         ', () => P.add(Q))
         bs.add(prefix + 'mulgen      ', () => gg.mulGen(k))
         bs.add(prefix + 'mul         ', () => P.mul(k))
