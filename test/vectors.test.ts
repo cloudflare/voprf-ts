@@ -18,7 +18,7 @@ import {
     generatePublicKey
 } from '../src/index.js'
 
-import allVectors from './testdata/allVectors_v11.json'
+import allVectors from './testdata/allVectors_v19.json'
 import { jest } from '@jest/globals'
 import { zip } from './util.js'
 
@@ -73,82 +73,83 @@ class wrapPOPRFClient extends POPRFClient {
 // https://tools.ietf.org/html/draft-irtf-cfrg-voprf-11
 describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]) => {
     const mode = testVector.mode as ModeID
-    const id = testVector.suiteID as SuiteID
+    const txtMode = Object.entries(Oprf.Mode)[mode as number][0]
+    const describe_or_skip = (Object.values(Oprf.Suite) as readonly string[]).includes(
+        testVector.identifier
+    )
+        ? describe
+        : describe.skip
+    const id = testVector.identifier as SuiteID
 
-    if (Object.values(Oprf.Suite).includes(id)) {
-        const txtMode = Object.entries(Oprf.Mode)[mode as number][0]
-        const txtSuite = Object.entries(Oprf.Suite)[Object.values(Oprf.Suite).indexOf(id)][0]
+    describe_or_skip(`${txtMode}, ${id}`, () => {
+        let skSm: Uint8Array
+        let server: OPRFServer | VOPRFServer | wrapPOPRFServer
+        let client: OPRFClient | VOPRFClient | wrapPOPRFClient
 
-        describe(`${txtMode}, ${txtSuite}`, () => {
-            let skSm: Uint8Array
-            let server: OPRFServer | VOPRFServer | wrapPOPRFServer
-            let client: OPRFClient | VOPRFClient | wrapPOPRFClient
+        beforeAll(async () => {
+            const seed = fromHex(testVector.seed)
+            const keyInfo = fromHex(testVector.keyInfo)
+            skSm = await derivePrivateKey(mode, id, seed, keyInfo)
+            const pkSm = generatePublicKey(id, skSm)
+            switch (mode) {
+                case Oprf.Mode.OPRF:
+                    server = new OPRFServer(id, skSm)
+                    client = new OPRFClient(id)
+                    break
 
-            beforeAll(async () => {
-                const seed = fromHex(testVector.seed)
-                const keyInfo = fromHex(testVector.keyInfo)
-                skSm = await derivePrivateKey(mode, id, seed, keyInfo)
-                const pkSm = generatePublicKey(id, skSm)
-                switch (mode) {
-                    case Oprf.Mode.OPRF:
-                        server = new OPRFServer(id, skSm)
-                        client = new OPRFClient(id)
-                        break
+                case Oprf.Mode.VOPRF:
+                    server = new VOPRFServer(id, skSm)
+                    client = new VOPRFClient(id, pkSm)
+                    break
 
-                    case Oprf.Mode.VOPRF:
-                        server = new VOPRFServer(id, skSm)
-                        client = new VOPRFClient(id, pkSm)
-                        break
+                case Oprf.Mode.POPRF:
+                    server = new wrapPOPRFServer(id, skSm)
+                    client = new wrapPOPRFClient(id, pkSm)
+                    break
+            }
+        })
 
-                    case Oprf.Mode.POPRF:
-                        server = new wrapPOPRFServer(id, skSm)
-                        client = new wrapPOPRFClient(id, pkSm)
-                        break
+        it('keygen', () => {
+            expect(toHex(skSm)).toBe(testVector.skSm)
+        })
+
+        const { vectors } = testVector
+
+        describe.each(vectors)('vec$#', (vi: typeof vectors[number]) => {
+            it('protocol', async () => {
+                // Creates a mock for randomBlinder method to
+                // inject the blind value given by the test vector.
+                for (const c of [OPRFClient, VOPRFClient, wrapPOPRFClient]) {
+                    let i = 0
+                    jest.spyOn(c.prototype, 'randomBlinder').mockImplementation(() => {
+                        return Promise.resolve(
+                            Scalar.deserialize(Oprf.getGroup(id), fromHexList(vi.Blind)[i++])
+                        )
+                    })
                 }
-            })
 
-            it('keygen', () => {
-                expect(toHex(skSm)).toBe(testVector.skSm)
-            })
+                if (testVector.mode === Oprf.Mode.POPRF) {
+                    const info = fromHex((vi as any).Info as string) // eslint-disable-line @typescript-eslint/no-explicit-any
+                    ;(server as wrapPOPRFServer).info = info
+                    ;(client as wrapPOPRFClient).info = info
+                }
 
-            const { vectors } = testVector
+                const input = fromHexList(vi.Input)
+                const [finData, evalReq] = await client.blind(input)
+                expect(toHexListClass(finData.blinds)).toEqual(vi.Blind)
+                expect(toHexListClass(evalReq.blinded)).toEqual(vi.BlindedElement)
 
-            describe.each(vectors)('vec$#', (vi: typeof vectors[number]) => {
-                it('protocol', async () => {
-                    // Creates a mock for randomBlinder method to
-                    // inject the blind value given by the test vector.
-                    for (const c of [OPRFClient, VOPRFClient, wrapPOPRFClient]) {
-                        let i = 0
-                        jest.spyOn(c.prototype, 'randomBlinder').mockImplementation(() => {
-                            return Promise.resolve(
-                                Scalar.deserialize(Oprf.getGroup(id), fromHexList(vi.Blind)[i++])
-                            )
-                        })
-                    }
+                const ev = await server.blindEvaluate(evalReq)
+                expect(toHexListClass(ev.evaluated)).toEqual(vi.EvaluationElement)
 
-                    if (testVector.mode === Oprf.Mode.POPRF) {
-                        const info = fromHex((vi as any).Info as string) // eslint-disable-line @typescript-eslint/no-explicit-any
-                        ;(server as wrapPOPRFServer).info = info
-                        ;(client as wrapPOPRFClient).info = info
-                    }
+                const output = await client.finalize(finData, ev)
+                expect(toHexListUint8Array(output)).toEqual(vi.Output)
 
-                    const input = fromHexList(vi.Input)
-                    const [finData, evalReq] = await client.blind(input)
-                    expect(toHexListClass(finData.blinds)).toEqual(vi.Blind)
-                    expect(toHexListClass(evalReq.blinded)).toEqual(vi.BlindedElement)
-
-                    const ev = await server.blindEvaluate(evalReq)
-                    expect(toHexListClass(ev.evaluated)).toEqual(vi.EvaluationElement)
-
-                    const output = await client.finalize(finData, ev)
-                    expect(toHexListUint8Array(output)).toEqual(vi.Output)
-
-                    const serverCheckOutput = zip(input, output).every(
-                        async (inout) => await server.verifyFinalize(inout[0], inout[1])
-                    )
-                    expect(serverCheckOutput).toBe(true)
-                })
+                const serverCheckOutput = zip(input, output).every(
+                    async (inout) => await server.verifyFinalize(inout[0], inout[1])
+                )
+                expect(serverCheckOutput).toBe(true)
             })
         })
-    }
+    })
 })
