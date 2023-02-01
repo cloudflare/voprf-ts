@@ -26,7 +26,7 @@ Oprf.Suite.P384_SHA384
 Oprf.Suite.P521_SHA512
 ```
 
-**Specification:** Complaint with IETF [draft-irtf-cfrg-voprf](https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf/) and tests vectors match with [v11](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-11).
+**Specification:** Compliant with IETF [draft-irtf-cfrg-voprf](https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf/) and tests vectors match with [v11](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-19).
 
 ### Usage
 
@@ -76,12 +76,13 @@ const output = await client.finalize(finData, evaluation);
 
 | Task | NPM scripts |
 |--|--|
-| Installing         | `$ npm ci`         |
-| Building           | `$ npm run build`  |
-| Unit Tests         | `$ npm run test`   |
-| Benchmarking       | `$ npm run bench`  |
-| Code Linting       | `$ npm run lint`   |
-| Code Formating     | `$ npm run format` |
+| Installing         | `$ npm ci`           |
+| Building           | `$ npm run build`    |
+| Unit Tests         | `$ npm run test`     |
+| Examples           | `$ npm run examples` |
+| Benchmarking       | `$ npm run bench`    |
+| Code Linting       | `$ npm run lint`     |
+| Code Formating     | `$ npm run format`   |
 
 
 **Dependencies**

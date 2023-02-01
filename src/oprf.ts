@@ -29,13 +29,13 @@ export abstract class Oprf {
     } as const
 
     static Suite = {
-        P256_SHA256: 3,
-        P384_SHA384: 4,
-        P521_SHA512: 5
+        P256_SHA256: 'P256-SHA256',
+        P384_SHA384: 'P384-SHA384',
+        P521_SHA512: 'P521-SHA512'
     } as const
 
     static LABELS = {
-        Version: 'VOPRF10-',
+        Version: 'OPRFV1-',
         FinalizeDST: 'Finalize',
         HashToGroupDST: 'HashToGroup-',
         HashToScalarDST: 'HashToScalar-',
@@ -53,14 +53,14 @@ export abstract class Oprf {
                 assertNever('Oprf.Mode', m)
         }
     }
-    private static getParams(id: SuiteID): [SuiteID, GroupID, string, number] {
+    private static getParams(id: string): readonly [SuiteID, GroupID, string, number] {
         switch (id) {
             case Oprf.Suite.P256_SHA256:
-                return [id, Group.ID.P256, 'SHA-256', 32]
+                return [Oprf.Suite.P256_SHA256, Group.ID.P256, 'SHA-256', 32]
             case Oprf.Suite.P384_SHA384:
-                return [id, Group.ID.P384, 'SHA-384', 48]
+                return [Oprf.Suite.P384_SHA384, Group.ID.P384, 'SHA-384', 48]
             case Oprf.Suite.P521_SHA512:
-                return [id, Group.ID.P521, 'SHA-512', 64]
+                return [Oprf.Suite.P521_SHA512, Group.ID.P521, 'SHA-512', 64]
             default:
                 assertNever('Oprf.Suite', id)
         }
@@ -76,10 +76,11 @@ export abstract class Oprf {
     }
     static getDST(mode: ModeID, suite: SuiteID, name: string): Uint8Array {
         const m = Oprf.validateMode(mode)
-        const s = Oprf.getParams(suite)[0]
+        const te = new TextEncoder()
         return joinAll([
-            new TextEncoder().encode(name + Oprf.LABELS.Version),
-            new Uint8Array([m, 0, s])
+            te.encode(name + Oprf.LABELS.Version),
+            Uint8Array.of(m),
+            te.encode('-' + suite)
         ])
     }
 
