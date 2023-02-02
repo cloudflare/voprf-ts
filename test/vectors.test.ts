@@ -18,7 +18,8 @@ import {
     generatePublicKey
 } from '../src/index.js'
 
-import allVectors from './testdata/allVectors_v19.json'
+// Test vectors taken from reference implementation at https://github.com/cfrg/draft-irtf-cfrg-voprf
+import allVectors from './testdata/allVectors_v20.json'
 import { jest } from '@jest/globals'
 import { zip } from './util.js'
 
