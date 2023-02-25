@@ -53,6 +53,7 @@
         "format": "prettier './(src|test|bench|examples)/*.ts' --write"
     },
     "dependencies": {
-        "sjcl": "1.0.8"
+        "@noble/curves": "^0.7.1",
+        "@noble/hashes": "^1.2.0"
     }
 }
