@@ -13,7 +13,7 @@ import { P521, hashToCurve as hashToP521 } from '@noble/curves/p521'
 import { Fp, Field } from '@noble/curves/abstract/modular'
 import { bytesToNumberBE } from '@noble/curves/abstract/utils'
 import { expand_message_xmd } from '@noble/curves/abstract/hash-to-curve'
-import { ProjPointType } from '@noble/curves/abstract/weierstrass'
+import { ProjConstructor, ProjPointType } from '@noble/curves/abstract/weierstrass'
 import { CHash } from '@noble/hashes/utils'
 
 function errDeserialization(T: { name: string }) {
@@ -30,27 +30,12 @@ function compat(x: { g: Group }, y: { g: Group }): void | never {
     if (x.g.id !== y.g.id) throw errGroup(x.g.id, y.g.id)
 }
 
-function getCurve(gid: GroupID) {
-    switch (gid) {
-        case Group.ID.P256:
-            return P256
-        case Group.ID.P384:
-            return P384
-        case Group.ID.P521:
-            return P521
-        default:
-            throw errBadGroup(gid)
-    }
-}
-
 export class Scalar {
-    private readonly order: bigint
     private readonly fp: Field<bigint>
     public readonly k: bigint
 
     private constructor(public readonly g: Group, k: bigint) {
-        this.order = getCurve(this.g.id).CURVE.n
-        this.fp = Fp(this.order)
+        this.fp = getCurve(this.g.id).fp
         this.k = this.fp.create(k)
     }
 
@@ -102,7 +87,8 @@ export class Scalar {
         checkSize(bytes, Scalar, g)
         const array = bytes.subarray(0, g.size)
         const k = bytesToNumberBE(array)
-        if (k >= getCurve(g.id).CURVE.n) {
+        const fp = getCurve(g.id).fp
+        if (k >= fp.ORDER) {
             throw errDeserialization(Scalar)
         }
         return new Scalar(g, k)
@@ -114,19 +100,6 @@ export class Scalar {
         return new Scalar(g, bytesToNumberBE(s))
     }
 }
-function getH2C(gid: GroupID) {
-    switch (gid) {
-        case Group.ID.P256:
-            return hashToP256
-        case Group.ID.P384:
-            return hashToP384
-        case Group.ID.P521:
-            return hashToP521
-        default:
-            throw errBadGroup(gid)
-    }
-}
-
 interface HashParams {
     hash: CHash
     L: number
@@ -149,14 +122,14 @@ export class Elt {
     private constructor(public readonly g: Group, private readonly p: ProjPointType<bigint>) {}
 
     static new(g: Group): Elt {
-        return new Elt(g, getCurve(g.id).ProjectivePoint.ZERO)
+        return new Elt(g, getCurve(g.id).Point.ZERO)
     }
     static gen(g: Group): Elt {
-        return new Elt(g, getCurve(g.id).ProjectivePoint.BASE)
+        return new Elt(g, getCurve(g.id).Point.BASE)
     }
 
     isIdentity(): boolean {
-        return this.p.equals(getCurve(this.g.id).ProjectivePoint.ZERO)
+        return this.p.equals(getCurve(this.g.id).Point.ZERO)
     }
 
     isEqual(a: Elt): boolean {
@@ -184,7 +157,7 @@ export class Elt {
         return new Elt(this.g, el)
     }
     serialize(compressed = true): Uint8Array {
-        if (this.p.equals(getCurve(this.g.id).ProjectivePoint.ZERO)) {
+        if (this.p.equals(getCurve(this.g.id).Point.ZERO)) {
             return Uint8Array.from([0])
         }
         return this.p.toRawBytes(compressed)
@@ -197,7 +170,7 @@ export class Elt {
 
     private static deser(g: Group, bytes: Uint8Array): Elt {
         const curve = getCurve(g.id)
-        const point = curve.ProjectivePoint.fromHex(bytes)
+        const point = curve.Point.fromHex(bytes)
         point.assertValidity()
         return new Elt(g, point)
     }
@@ -218,7 +191,7 @@ export class Elt {
     }
 
     static async hash(g: Group, msg: Uint8Array, dst: Uint8Array): Promise<Elt> {
-        const h2c = getH2C(g.id)
+        const h2c = getCurve(g.id).h2c
         const DST = new TextDecoder().decode(dst)
         const p = h2c(msg, { DST }) as ProjPointType<bigint>
         return new Elt(g, p)
@@ -300,4 +273,20 @@ export class Group {
     hashToScalar(msg: Uint8Array, dst: Uint8Array): Promise<Scalar> {
         return Scalar.hash(this, msg, dst)
     }
+}
+
+type CurveDef = {
+    fp: Field<bigint>
+    Point: ProjConstructor<bigint>
+    h2c: typeof hashToP256
+}
+const curves: Record<GroupID, CurveDef> = {
+    [Group.ID.P256]: { fp: Fp(P256.CURVE.n), Point: P256.ProjectivePoint, h2c: hashToP256 },
+    [Group.ID.P384]: { fp: Fp(P384.CURVE.n), Point: P384.ProjectivePoint, h2c: hashToP384 },
+    [Group.ID.P521]: { fp: Fp(P521.CURVE.n), Point: P521.ProjectivePoint, h2c: hashToP521 }
+}
+function getCurve(gid: GroupID) {
+    /* eslint-disable */
+    if (![Group.ID.P256, Group.ID.P384, Group.ID.P521].includes(gid)) throw errBadGroup(gid)
+    return curves[gid]
 }
