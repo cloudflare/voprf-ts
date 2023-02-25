@@ -30,15 +30,6 @@ function compat(x: { g: Group }, y: { g: Group }): void | never {
     if (x.g.id !== y.g.id) throw errGroup(x.g.id, y.g.id)
 }
 
-// case 'SHA-1':
-//     return { outLenBytes: 20, blockLenBytes: 64 }
-// case 'SHA-256':
-//     return { outLenBytes: 32, blockLenBytes: 64 }
-// case 'SHA-384':
-//     return { outLenBytes: 48, blockLenBytes: 128 }
-// case 'SHA-512':
-//     return { outLenBytes: 64, blockLenBytes: 128 }
-
 function getCurve(gid: GroupID) {
     switch (gid) {
         case Group.ID.P256:
@@ -96,8 +87,6 @@ export class Scalar {
 
     serialize(): Uint8Array {
         const k = this.fp.create(this.k)
-        // k.normalize()
-
         const ab = this.fp.toBytes(k)
         const unpaded = new Uint8Array(ab)
         const serScalar = new Uint8Array(this.g.size)
@@ -112,8 +101,6 @@ export class Scalar {
     static deserialize(g: Group, bytes: Uint8Array): Scalar {
         checkSize(bytes, Scalar, g)
         const array = bytes.subarray(0, g.size)
-        // const k = sjcl.bn.fromBits(sjcl.codec.bytes.toBits(array))
-        // k.normalize()
         const k = bytesToNumberBE(array)
         if (k >= getCurve(g.id).CURVE.n) {
             throw errDeserialization(Scalar)
@@ -122,14 +109,6 @@ export class Scalar {
     }
 
     static async hash(g: Group, msg: Uint8Array, dst: Uint8Array): Promise<Scalar> {
-        // const h2c = getH2C(g);
-        // const curve = getCurve(g.id);
-        // const DST = new TextDecoder().decode(dst);
-        // const p = curve.CURVE.n;
-        // const opts = { DST, p, m: 1, k: 128 };
-        // const s = hash_to_field(msg, 1, opts)[0];
-        // return new Scalar(g, s)
-
         const { hash, L } = getHashParams(g.id)
         const s = expand_message_xmd(msg, dst, L, hash)
         return new Scalar(g, bytesToNumberBE(s))
@@ -147,10 +126,6 @@ function getH2C(gid: GroupID) {
             throw errBadGroup(gid)
     }
 }
-
-// interface InnerScalar {
-//     readonly k: unknown
-// }
 
 interface HashParams {
     hash: CHash
@@ -181,21 +156,12 @@ export class Elt {
     }
 
     isIdentity(): boolean {
-        // return this.p.equals()
         return this.p.equals(getCurve(this.g.id).ProjectivePoint.ZERO)
     }
 
     isEqual(a: Elt): boolean {
         compat(this, a)
         return this.p.equals(a.p)
-        // if (this.p.isIdentity && a.p.isIdentity) {
-        //     return true
-        // } else if (this.p.isIdentity || a.p.isIdentity) {
-        //     return false
-        // }
-        // const { x: x1, y: y1 } = this.p
-        // const { x: x2, y: y2 } = a.p
-        // return x1.equals(x2) && y1.equals(y2)
     }
 
     neg(): Elt {
@@ -256,12 +222,6 @@ export class Elt {
         const DST = new TextDecoder().decode(dst)
         const p = h2c(msg, { DST }) as ProjPointType<bigint>
         return new Elt(g, p)
-        // // const curve = getCurve(g.id);
-        // // ge
-        // const u = await Elt.hashToField(g, msg, dst, 2)
-        // const Q0 = Elt.sswu(g, u[0])
-        // const Q1 = Elt.sswu(g, u[1])
-        // return Q0.add(Q1)
     }
 }
 
