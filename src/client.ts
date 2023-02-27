@@ -13,7 +13,7 @@ class baseClient extends Oprf {
         super(mode, suite)
     }
 
-    randomBlinder(): Promise<Scalar> {
+    randomBlinder(): Scalar {
         return this.gg.randomScalar()
     }
 

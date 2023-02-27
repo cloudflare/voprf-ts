@@ -120,7 +120,7 @@ export abstract class Oprf {
         return new Uint8Array(await crypto.subtle.digest(this.hash, hashInput))
     }
 
-    protected scalarFromInfo(info: Uint8Array): Promise<Scalar> {
+    protected scalarFromInfo(info: Uint8Array): Scalar {
         if (info.length >= 1 << 16) {
             throw new Error('invalid info length')
         }

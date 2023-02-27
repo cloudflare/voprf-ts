@@ -71,7 +71,7 @@ async function computeComposites(
 // from https://www.ietf.org/id/draft-irtf-cfrg-voprf-09.html#name-discrete-log-equivalence-pr
 // to generate a challenge from the input elements. The point arguments
 // correspond to [B, M, Z, t2, t3] from the specification.
-function challenge(params: DLEQParams, points: [Elt, Elt, Elt, Elt, Elt]): Promise<Scalar> {
+function challenge(params: DLEQParams, points: [Elt, Elt, Elt, Elt, Elt]): Scalar {
     let h2Input = new Uint8Array()
     for (const p of points) {
         const P = p.serialize()

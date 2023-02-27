@@ -94,7 +94,7 @@ export class Scalar {
         return new Scalar(g, k)
     }
 
-    static async hash(g: Group, msg: Uint8Array, dst: Uint8Array): Promise<Scalar> {
+    static hash(g: Group, msg: Uint8Array, dst: Uint8Array): Scalar {
         const { hash, L } = getHashParams(g.id)
         const s = expand_message_xmd(msg, dst, L, hash)
         return new Scalar(g, bytesToNumberBE(s))
@@ -190,7 +190,7 @@ export class Elt {
         }
     }
 
-    static async hash(g: Group, msg: Uint8Array, dst: Uint8Array): Promise<Elt> {
+    static hash(g: Group, msg: Uint8Array, dst: Uint8Array): Elt {
         const h2c = getCurve(g.id).h2c
         const DST = new TextDecoder().decode(dst)
         const p = h2c(msg, { DST }) as ProjPointType<bigint>
@@ -261,16 +261,16 @@ export class Group {
         return Elt.gen(this).mul(s)
     }
 
-    randomScalar(): Promise<Scalar> {
+    randomScalar(): Scalar {
         const msg = crypto.getRandomValues(new Uint8Array(this.size))
         return Scalar.hash(this, msg, new Uint8Array())
     }
 
-    hashToGroup(msg: Uint8Array, dst: Uint8Array): Promise<Elt> {
+    hashToGroup(msg: Uint8Array, dst: Uint8Array): Elt {
         return Elt.hash(this, msg, dst)
     }
 
-    hashToScalar(msg: Uint8Array, dst: Uint8Array): Promise<Scalar> {
+    hashToScalar(msg: Uint8Array, dst: Uint8Array): Scalar {
         return Scalar.hash(this, msg, dst)
     }
 }
