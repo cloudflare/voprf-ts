@@ -1,6 +1,6 @@
 {
     "name": "@cloudflare/voprf-ts",
-    "version": "0.20.0",
+    "version": "0.21.0",
     "description": "voprf-ts: A TypeScript Library for Oblivious Pseudorandom Functions (OPRF)",
     "author": "Armando Faz <armfazh@cloudflare.com>",
     "maintainers": "Armando Faz <armfazh@cloudflare.com>",
@@ -44,6 +44,7 @@
     },
     "scripts": {
         "prepack": "tsc -b",
+        "prepare": "tsc -b",
         "build": "tsc -b",
         "clean": "tsc -b --clean . test",
         "test": "tsc -b test && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --ci",
