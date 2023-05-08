@@ -72,7 +72,7 @@ export class VOPRFClient extends baseClient {
         super(Oprf.Mode.VOPRF, suite)
     }
 
-    finalize(finData: FinalizeData, evaluation: Evaluation): Promise<Array<Uint8Array>> {
+    async finalize(finData: FinalizeData, evaluation: Evaluation): Promise<Array<Uint8Array>> {
         if (!evaluation.proof) {
             throw new Error('no proof provided')
         }
@@ -84,7 +84,7 @@ export class VOPRFClient extends baseClient {
         }
 
         if (
-            !evaluation.proof.verify_batch(
+            !await evaluation.proof.verify_batch(
                 [this.gg.generator(), pkS],
                 zip(finData.evalReq.blinded, evaluation.evaluated)
             )
