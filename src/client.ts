@@ -127,7 +127,7 @@ export class POPRFClient extends baseClient {
         }
 
         if (
-            !evaluation.proof.verify_batch(
+            !await evaluation.proof.verify_batch(
                 [this.gg.generator(), tw],
                 zip(evaluation.evaluated, finData.evalReq.blinded)
             )
