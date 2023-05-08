@@ -42,7 +42,7 @@ export async function poprfExample() {
     // the client with an evaluation.
     //
     //          evaluation = BlindEvaluate(evalReq, info*)
-    const evaluation = await server.blindEvaluate(evalReq)
+    const evaluation = await server.blindEvaluate(evalReq, infoBytes)
     //            evaluation
     //       <<------------------
     //
