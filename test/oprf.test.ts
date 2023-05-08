@@ -20,6 +20,18 @@ import {
 
 import { serdeClass } from './util.js'
 
+async function testBadProof(
+    client: OPRFClient,
+    server: OPRFServer,
+    finData: FinalizeData,
+    evaluation: Evaluation
+) {
+    const badEval = Evaluation.deserialize(server.constructDLEQParams(), evaluation.serialize())
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    Object.assign(badEval.proof!, { s: evaluation.proof!.c })
+    await expect(client.finalize(finData, badEval)).rejects.toThrow(/proof failed/)
+}
+
 describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
     describe.each(Object.entries(Oprf.Suite))(`${modeName}`, (suiteName, id) => {
         let server: OPRFServer | VOPRFServer | POPRFServer
@@ -65,6 +77,10 @@ describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
             //
             const output = await client.finalize(finData, evaluation)
             expect(output[0]).toHaveLength(Oprf.getOprfSize(id))
+
+            if (evaluation.proof) {
+                await testBadProof(client, server, finData, evaluation)
+            }
 
             const serverOutput = await server.evaluate(input)
             expect(output[0]).toStrictEqual(serverOutput)
