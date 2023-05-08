@@ -25,9 +25,7 @@ async function testBadProof(client: OPRFClient, server: OPRFServer, finData: Fin
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     Object.assign(badEval.proof!, {s: evaluation.proof!.c})
     // eslint-disable-next-line jest/no-conditional-expect
-    await expect(async () => {
-        await client.finalize(finData, badEval)
-    }).rejects.toThrow()
+    await expect(client.finalize(finData, badEval)).rejects.toThrow(/proof failed/)
 }
 
 describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
