@@ -75,7 +75,6 @@ describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
             // Client
             // output = Finalize(finData, evaluation, info*)
             //
-
             const output = await client.finalize(finData, evaluation)
             expect(output[0]).toHaveLength(Oprf.getOprfSize(id))
 
