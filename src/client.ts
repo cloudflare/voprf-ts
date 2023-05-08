@@ -84,10 +84,10 @@ export class VOPRFClient extends baseClient {
         }
 
         if (
-            !await evaluation.proof.verify_batch(
+            !(await evaluation.proof.verify_batch(
                 [this.gg.generator(), pkS],
                 zip(finData.evalReq.blinded, evaluation.evaluated)
-            )
+            ))
         ) {
             throw new Error('proof failed')
         }
@@ -127,10 +127,10 @@ export class POPRFClient extends baseClient {
         }
 
         if (
-            !await evaluation.proof.verify_batch(
+            !(await evaluation.proof.verify_batch(
                 [this.gg.generator(), tw],
                 zip(evaluation.evaluated, finData.evalReq.blinded)
-            )
+            ))
         ) {
             throw new Error('proof failed')
         }
