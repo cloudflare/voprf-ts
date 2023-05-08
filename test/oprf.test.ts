@@ -29,7 +29,6 @@ async function testBadProof(
     const badEval = Evaluation.deserialize(server.constructDLEQParams(), evaluation.serialize())
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     Object.assign(badEval.proof!, { s: evaluation.proof!.c })
-    // eslint-disable-next-line jest/no-conditional-expect
     await expect(client.finalize(finData, badEval)).rejects.toThrow(/proof failed/)
 }
 
