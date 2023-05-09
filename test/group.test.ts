@@ -3,9 +3,10 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Elt, Group, Scalar } from '../src/index.js'
-
 import { serdeClass } from './util.js'
+import { Oprf } from '../src'
+
+const Group = Oprf.Group
 
 describe.each(Object.entries(Group.ID))('%s', (_groupName, id) => {
     const gg = new Group(id)
@@ -15,7 +16,7 @@ describe.each(Object.entries(Group.ID))('%s', (_groupName, id) => {
 
         for (const compress of [true, false]) {
             const serP = P.serialize(compress)
-            const Q = Elt.deserialize(gg, serP)
+            const Q = gg.desElt(serP)
             expect(P.isEqual(Q)).toBe(true)
         }
     })
@@ -23,18 +24,18 @@ describe.each(Object.entries(Group.ID))('%s', (_groupName, id) => {
     it('serdeElementZero', () => {
         const Z = gg.identity()
 
-        expect(serdeClass(Elt, Z, gg)).toBe(true)
+        expect(serdeClass(Group.Elt, Z, gg)).toBe(true)
     })
 
     it('serdeScalar', async () => {
         const k = await gg.randomScalar()
 
-        expect(serdeClass(Scalar, k, gg)).toBe(true)
+        expect(serdeClass(Group.Scalar, k, gg)).toBe(true)
     })
 
     it('serdeScalarZero', () => {
         const z = gg.newScalar()
 
-        expect(serdeClass(Scalar, z, gg)).toBe(true)
+        expect(serdeClass(Group.Scalar, z, gg)).toBe(true)
     })
 })

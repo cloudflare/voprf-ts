@@ -4,10 +4,10 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import {
-    Oprf,
     deriveKeyPair,
     generateKeyPair,
     getKeySizes,
+    Oprf,
     validatePrivateKey,
     validatePublicKey
 } from '../src/index.js'

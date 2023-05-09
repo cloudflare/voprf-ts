@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Elt, Group, OPRFClient, OPRFServer, Oprf, Scalar, randomPrivateKey } from '../src/index.js'
+import { Oprf, OPRFClient, OPRFServer, randomPrivateKey } from '../src/index.js'
 
 import { jest } from '@jest/globals'
 
@@ -32,10 +32,10 @@ function mockImportKey(...x: Parameters<typeof importKey>): ReturnType<typeof im
 function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
     const [algorithm, key, data] = x
     if (algorithm === 'OPRF') {
-        const g = new Group(Group.getID((key.algorithm as EcdsaParams).name))
-        const P = Elt.deserialize(g, new Uint8Array(data as ArrayBuffer))
+        const g = new Oprf.Group(Oprf.Group.getID((key.algorithm as EcdsaParams).name))
+        const P = g.desElt(new Uint8Array(data as ArrayBuffer))
         const serSk = new Uint8Array((key as CryptoKeyWithBuffer).keyData)
-        const sk = Scalar.deserialize(g, serSk)
+        const sk = g.desScalar(serSk)
         const Z = P.mul(sk)
         const serZ = Z.serialize()
         return Promise.resolve(serZ.buffer as ArrayBuffer)

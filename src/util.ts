@@ -3,6 +3,8 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
+import { Deserializer } from './groupTypes.js'
+
 export function joinAll(a: Uint8Array[]): Uint8Array {
     let size = 0
     for (let i = 0; i < a.length; i++) {
@@ -76,26 +78,22 @@ export function fromU16LenPrefix(b: Uint8Array): { head: Uint8Array; tail: Uint8
     return { head, tail }
 }
 
-export function fromU16LenPrefixClass<T, U>(
-    c: {
-        size: (u: U) => number
-        deserialize: (u: U, b: Uint8Array) => T
-    },
-    u: U,
+export function fromU16LenPrefixDes<T>(
+    c: Deserializer<T>,
     b: Uint8Array
 ): { head: T[]; tail: Uint8Array } {
     if (b.length < 2) {
         throw new Error(`buffer shorter than expected`)
     }
     const n = (b[0] << 8) | b[1]
-    const size = c.size(u)
+    const size = c.size()
     if (b.length < 2 + n * size) {
         throw new Error(`buffer shorter than expected`)
     }
 
     const head: T[] = []
     for (let i = 0; i < n; i++) {
-        head.push(c.deserialize(u, b.subarray(2 + i * size, 2 + (i + 1) * size)))
+        head.push(c.deserialize(b.subarray(2 + i * size, 2 + (i + 1) * size)))
     }
 
     const tail = b.subarray(2 + n * size)

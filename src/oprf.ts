@@ -4,9 +4,10 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import { DLEQParams, DLEQProof } from './dleq.js'
-import { Elt, Group, GroupID, Scalar } from './group.js'
+import { Elt, Group, GroupCons, GroupID, Scalar } from './groupTypes.js'
+
 import {
-    fromU16LenPrefixClass,
+    fromU16LenPrefixDes,
     fromU16LenPrefixUint8Array,
     joinAll,
     toU16LenPrefix,
@@ -22,6 +23,17 @@ function assertNever(name: string, x: unknown): never {
 }
 
 export abstract class Oprf {
+    private static _Group: GroupCons
+    static get Group(): GroupCons {
+        if (!this._Group) {
+            throw new Error('Must set Oprf.Group to impl of GroupCons')
+        }
+        return this._Group
+    }
+    static set Group(group: GroupCons) {
+        this._Group = group
+    }
+
     static Mode = {
         OPRF: 0,
         VOPRF: 1,
@@ -56,17 +68,17 @@ export abstract class Oprf {
     private static getParams(id: string): readonly [SuiteID, GroupID, string, number] {
         switch (id) {
             case Oprf.Suite.P256_SHA256:
-                return [Oprf.Suite.P256_SHA256, Group.ID.P256, 'SHA-256', 32]
+                return [Oprf.Suite.P256_SHA256, Oprf.Group.ID.P256, 'SHA-256', 32]
             case Oprf.Suite.P384_SHA384:
-                return [Oprf.Suite.P384_SHA384, Group.ID.P384, 'SHA-384', 48]
+                return [Oprf.Suite.P384_SHA384, Oprf.Group.ID.P384, 'SHA-384', 48]
             case Oprf.Suite.P521_SHA512:
-                return [Oprf.Suite.P521_SHA512, Group.ID.P521, 'SHA-512', 64]
+                return [Oprf.Suite.P521_SHA512, Oprf.Group.ID.P521, 'SHA-512', 64]
             default:
                 assertNever('Oprf.Suite', id)
         }
     }
     static getGroup(suite: SuiteID): Group {
-        return new Group(Oprf.getParams(suite)[1])
+        return new Oprf.Group(Oprf.getParams(suite)[1])
     }
     static getHash(suite: SuiteID): string {
         return Oprf.getParams(suite)[2]
@@ -92,7 +104,7 @@ export abstract class Oprf {
     constructor(mode: ModeID, suite: SuiteID) {
         const [ID, gid, hash] = Oprf.getParams(suite)
         this.ID = ID
-        this.gg = new Group(gid)
+        this.gg = new Oprf.Group(gid)
         this.hash = hash
         this.mode = Oprf.validateMode(mode)
     }
@@ -162,7 +174,7 @@ export class Evaluation {
     }
 
     static deserialize(params: DLEQParams, bytes: Uint8Array): Evaluation {
-        const { head: evalList, tail } = fromU16LenPrefixClass(Elt, params.gg, bytes)
+        const { head: evalList, tail } = fromU16LenPrefixDes(params.gg.eltDes, bytes)
         let proof: DLEQProof | undefined
         const prSize = DLEQProof.size(params)
         const proofBytes = tail.subarray(1, 1 + prSize)
@@ -193,7 +205,7 @@ export class EvaluationRequest {
     }
 
     static deserialize(g: Group, bytes: Uint8Array): EvaluationRequest {
-        const { head: blindedList } = fromU16LenPrefixClass(Elt, g, bytes)
+        const { head: blindedList } = fromU16LenPrefixDes(g.eltDes, bytes)
         return new EvaluationRequest(blindedList)
     }
 }
@@ -223,7 +235,7 @@ export class FinalizeData {
 
     static deserialize(g: Group, bytes: Uint8Array): FinalizeData {
         const { head: inputs, tail: t0 } = fromU16LenPrefixUint8Array(bytes)
-        const { head: blinds, tail: t1 } = fromU16LenPrefixClass(Scalar, g, t0)
+        const { head: blinds, tail: t1 } = fromU16LenPrefixDes(g.scalarDes, t0)
         const evalReq = EvaluationRequest.deserialize(g, t1)
         return new FinalizeData(inputs, blinds, evalReq)
     }

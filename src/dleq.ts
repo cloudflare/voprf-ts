@@ -5,7 +5,7 @@
 //
 // Implementation of batched discrete log equivalents proofs (DLEQ) as
 // described in https://www.ietf.org/id/draft-irtf-cfrg-voprf-09.html#name-discrete-log-equivalence-pr.
-import { Elt, Group, Scalar } from './group.js'
+import { Elt, Group, Scalar } from './groupTypes.js'
 import { checkSize, joinAll, to16bits, toU16LenPrefix } from './util.js'
 
 export interface DLEQParams {
@@ -121,14 +121,15 @@ export class DLEQProof {
     }
 
     static size(params: DLEQParams): number {
-        return 2 * Scalar.size(params.gg)
+        return 2 * params.gg.scalarSize()
     }
 
     static deserialize(params: Required<DLEQParams>, bytes: Uint8Array): DLEQProof {
         checkSize(bytes, DLEQProof, params)
-        const n = Scalar.size(params.gg)
-        const c = Scalar.deserialize(params.gg, bytes.subarray(0, n))
-        const s = Scalar.deserialize(params.gg, bytes.subarray(n, 2 * n))
+        const group = params.gg
+        const n = group.scalarSize()
+        const c = group.desScalar(bytes.subarray(0, n))
+        const s = group.desScalar(bytes.subarray(n, 2 * n))
         return new DLEQProof(params, c, s)
     }
 }

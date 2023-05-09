@@ -4,18 +4,17 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import {
+    derivePrivateKey,
+    generatePublicKey,
     ModeID,
+    Oprf,
     OPRFClient,
     OPRFServer,
-    Oprf,
     POPRFClient,
     POPRFServer,
-    Scalar,
     SuiteID,
     VOPRFClient,
-    VOPRFServer,
-    derivePrivateKey,
-    generatePublicKey
+    VOPRFServer
 } from '../src/index.js'
 
 // Test vectors taken from reference implementation at https://github.com/cfrg/draft-irtf-cfrg-voprf
@@ -123,9 +122,8 @@ describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]
                 for (const c of [OPRFClient, VOPRFClient, wrapPOPRFClient]) {
                     let i = 0
                     jest.spyOn(c.prototype, 'randomBlinder').mockImplementation(() => {
-                        return Promise.resolve(
-                            Scalar.deserialize(Oprf.getGroup(id), fromHexList(vi.Blind)[i++])
-                        )
+                        const group = Oprf.getGroup(id)
+                        return Promise.resolve(group.desScalar(fromHexList(vi.Blind)[i++]))
                     })
                 }
 

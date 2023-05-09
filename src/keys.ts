@@ -3,9 +3,9 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Elt, Scalar } from './group.js'
 import { ModeID, Oprf, SuiteID } from './oprf.js'
 import { joinAll, toU16LenPrefix } from './util.js'
+import { Scalar } from './groupTypes.js'
 
 export function getKeySizes(id: SuiteID): { Nsk: number; Npk: number } {
     const gg = Oprf.getGroup(id)
@@ -14,7 +14,7 @@ export function getKeySizes(id: SuiteID): { Nsk: number; Npk: number } {
 
 export function validatePrivateKey(id: SuiteID, privateKey: Uint8Array): boolean {
     try {
-        const s = Scalar.deserialize(Oprf.getGroup(id), privateKey)
+        const s = Oprf.getGroup(id).desScalar(privateKey)
         return !s.isZero()
     } catch (_) {
         return false
@@ -23,7 +23,7 @@ export function validatePrivateKey(id: SuiteID, privateKey: Uint8Array): boolean
 
 export function validatePublicKey(id: SuiteID, publicKey: Uint8Array): boolean {
     try {
-        const P = Elt.deserialize(Oprf.getGroup(id), publicKey)
+        const P = Oprf.getGroup(id).desElt(publicKey)
         return !P.isIdentity()
     } catch (_) {
         return false
@@ -65,7 +65,7 @@ export async function derivePrivateKey(
 
 export function generatePublicKey(id: SuiteID, privateKey: Uint8Array): Uint8Array {
     const gg = Oprf.getGroup(id)
-    const priv = Scalar.deserialize(gg, privateKey)
+    const priv = gg.desScalar(privateKey)
     const pub = gg.mulGen(priv)
     return pub.serialize()
 }
