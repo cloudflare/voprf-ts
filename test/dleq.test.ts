@@ -3,12 +3,12 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { DLEQParams, DLEQProof, DLEQProver, Elt, Group, Scalar } from '../src/index.js'
+import { DLEQParams, DLEQProof, DLEQProver, Elt, Oprf, Scalar } from '../src/index.js'
 
 import { serdeClass } from './util.js'
 
-describe.each(Object.entries(Group.ID))('DLEQ', (groupName, id) => {
-    const gg = new Group(id)
+describe.each(Object.entries(Oprf.Group.ID))('DLEQ', (groupName, id) => {
+    const gg = new Oprf.Group(id)
     const params: DLEQParams = { gg, hash: 'SHA-256', dst: 'domain-sep' }
     const Peggy = new DLEQProver(params)
 

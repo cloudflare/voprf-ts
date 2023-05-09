@@ -6,18 +6,26 @@
 import { checkSize, joinAll, xor } from './util.js'
 
 import sjcl from './sjcl/index.js'
+import {
+    Elt,
+    errBadGroup,
+    getGroupID,
+    Group,
+    GroupCons,
+    GroupID,
+    GroupIDs,
+    Scalar
+} from './groupTypes.js'
 
 function errDeserialization(T: { name: string }) {
     return new Error(`group: deserialization of ${T.name} failed.`)
 }
+
 function errGroup(X: GroupID, Y: GroupID) {
     return new Error(`group: mismatch between groups ${X} and ${Y}.`)
 }
-function errBadGroup(X: string) {
-    return new Error(`group: bad group name ${X}.`)
-}
 
-function compat(x: { g: Group }, y: { g: Group }): void | never {
+function compat(x: { g: GroupSj }, y: { g: GroupSj }): void | never {
     if (x.g.id !== y.g.id) throw errGroup(x.g.id, y.g.id)
 }
 
@@ -80,29 +88,29 @@ async function expandXMD(
 
 function getCurve(gid: GroupID): sjcl.ecc.curve {
     switch (gid) {
-        case Group.ID.P256:
+        case GroupSj.ID.P256:
             return sjcl.ecc.curves.c256
-        case Group.ID.P384:
+        case GroupSj.ID.P384:
             return sjcl.ecc.curves.c384
-        case Group.ID.P521:
+        case GroupSj.ID.P521:
             return sjcl.ecc.curves.c521
         default:
             throw errBadGroup(gid)
     }
 }
 
-export class Scalar {
+export class ScalarSj implements Scalar {
     private readonly order: sjcl.bn
 
-    private constructor(public readonly g: Group, private readonly k: sjcl.bn) {
+    private constructor(public readonly g: GroupSj, private readonly k: sjcl.bn) {
         this.order = getCurve(this.g.id).r
     }
 
-    static new(g: Group): Scalar {
-        return new Scalar(g, new sjcl.bn(0))
+    static new(g: GroupSj): ScalarSj {
+        return new ScalarSj(g, new sjcl.bn(0))
     }
 
-    isEqual(s: Scalar): boolean {
+    isEqual(s: ScalarSj): boolean {
         return this.k.equals(s.k)
     }
 
@@ -110,29 +118,29 @@ export class Scalar {
         return this.k.equals(0)
     }
 
-    add(s: Scalar): Scalar {
+    add(s: ScalarSj): ScalarSj {
         compat(this, s)
         const c = this.k.add(s.k).mod(this.order)
         c.normalize()
-        return new Scalar(this.g, c)
+        return new ScalarSj(this.g, c)
     }
 
-    sub(s: Scalar): Scalar {
+    sub(s: ScalarSj): ScalarSj {
         compat(this, s)
         const c = this.k.sub(s.k).mod(this.order)
         c.normalize()
-        return new Scalar(this.g, c)
+        return new ScalarSj(this.g, c)
     }
 
-    mul(s: Scalar): Scalar {
+    mul(s: ScalarSj): ScalarSj {
         compat(this, s)
         const c = this.k.mulmod(s.k, this.order)
         c.normalize()
-        return new Scalar(this.g, c)
+        return new ScalarSj(this.g, c)
     }
 
-    inv(): Scalar {
-        return new Scalar(this.g, this.k.inverseMod(this.order))
+    inv(): ScalarSj {
+        return new ScalarSj(this.g, this.k.inverseMod(this.order))
     }
 
     serialize(): Uint8Array {
@@ -146,28 +154,28 @@ export class Scalar {
         return serScalar
     }
 
-    static size(g: Group): number {
+    static size(g: GroupSj): number {
         return g.size
     }
 
-    static deserialize(g: Group, bytes: Uint8Array): Scalar {
-        checkSize(bytes, Scalar, g)
+    static deserialize(g: GroupSj, bytes: Uint8Array): ScalarSj {
+        checkSize(bytes, ScalarSj, g)
         const array = Array.from(bytes.subarray(0, g.size))
         const k = sjcl.bn.fromBits(sjcl.codec.bytes.toBits(array))
         k.normalize()
         if (k.greaterEquals(getCurve(g.id).r)) {
-            throw errDeserialization(Scalar)
+            throw errDeserialization(ScalarSj)
         }
-        return new Scalar(g, k)
+        return new ScalarSj(g, k)
     }
 
-    static async hash(g: Group, msg: Uint8Array, dst: Uint8Array): Promise<Scalar> {
+    static async hash(g: GroupSj, msg: Uint8Array, dst: Uint8Array): Promise<ScalarSj> {
         const { hash, L } = getHashParams(g.id)
         const bytes = await expandXMD(hash, msg, dst, L)
         const array = Array.from(bytes)
         const bitArr = sjcl.codec.bytes.toBits(array)
         const k = sjcl.bn.fromBits(bitArr).mod(getCurve(g.id).r)
-        return new Scalar(g, k)
+        return new ScalarSj(g, k)
     }
 }
 
@@ -187,19 +195,19 @@ function getSSWUParams(gid: GroupID): SSWUParams {
     let Z
     let c2
     switch (gid) {
-        case Group.ID.P256:
+        case GroupSj.ID.P256:
             Z = -10
             // c2 = sqrt(-Z) in GF(p).
             c2 = '0x25ac71c31e27646736870398ae7f554d8472e008b3aa2a49d332cbd81bcc3b80'
 
             break
-        case Group.ID.P384:
+        case GroupSj.ID.P384:
             Z = -12
             // c2 = sqrt(-Z) in GF(p).
             c2 =
                 '0x2accb4a656b0249c71f0500e83da2fdd7f98e383d68b53871f872fcb9ccb80c53c0de1f8a80f7e1914e2ec69f5a626b3'
             break
-        case Group.ID.P521:
+        case GroupSj.ID.P521:
             Z = -4
             // c2 = sqrt(-Z) in GF(p).
             c2 = '0x2'
@@ -223,32 +231,33 @@ interface HashParams {
 
 function getHashParams(gid: GroupID): HashParams {
     switch (gid) {
-        case Group.ID.P256:
+        case GroupSj.ID.P256:
             return { hash: 'SHA-256', L: 48 }
-        case Group.ID.P384:
+        case GroupSj.ID.P384:
             return { hash: 'SHA-384', L: 72 }
-        case Group.ID.P521:
+        case GroupSj.ID.P521:
             return { hash: 'SHA-512', L: 98 }
         default:
             throw errBadGroup(gid)
     }
 }
 
-export class Elt {
-    private constructor(public readonly g: Group, private readonly p: sjcl.ecc.point) {}
+export class EltSj implements Elt {
+    private constructor(public readonly g: GroupSj, private readonly p: sjcl.ecc.point) {}
 
-    static new(g: Group): Elt {
-        return new Elt(g, new sjcl.ecc.point(getCurve(g.id)))
+    static new(g: GroupSj): EltSj {
+        return new EltSj(g, new sjcl.ecc.point(getCurve(g.id)))
     }
-    static gen(g: Group): Elt {
-        return new Elt(g, getCurve(g.id).G)
+
+    static gen(g: GroupSj): EltSj {
+        return new EltSj(g, getCurve(g.id).G)
     }
 
     isIdentity(): boolean {
         return this.p.isIdentity
     }
 
-    isEqual(a: Elt): boolean {
+    isEqual(a: EltSj): boolean {
         compat(this, a)
         if (this.p.isIdentity && a.p.isIdentity) {
             return true
@@ -260,26 +269,30 @@ export class Elt {
         return x1.equals(x2) && y1.equals(y2)
     }
 
-    neg(): Elt {
+    neg(): EltSj {
         return this.p.negate()
     }
-    add(a: Elt): Elt {
+
+    add(a: EltSj): EltSj {
         compat(this, a)
-        return new Elt(this.g, this.p.toJac().add(a.p).toAffine())
+        return new EltSj(this.g, this.p.toJac().add(a.p).toAffine())
     }
-    mul(s: Scalar): Elt {
+
+    mul(s: ScalarSj): EltSj {
         compat(this, s)
-        return new Elt(this.g, this.p.mult((s as unknown as InnerScalar).k))
+        return new EltSj(this.g, this.p.mult((s as unknown as InnerScalar).k))
     }
-    mul2(k1: Scalar, a: Elt, k2: Scalar): Elt {
+
+    mul2(k1: ScalarSj, a: EltSj, k2: ScalarSj): EltSj {
         compat(this, k1)
         compat(this, k2)
         compat(this, a)
-        return new Elt(
+        return new EltSj(
             this.g,
             this.p.mult2((k1 as unknown as InnerScalar).k, (k2 as unknown as InnerScalar).k, a.p)
         )
     }
+
     // Serializes an element in uncompressed form.
     private serUnComp(a: sjcl.ecc.point): Uint8Array {
         const xy = sjcl.codec.arrayBuffer.fromBits(a.toBits(), false)
@@ -314,12 +327,12 @@ export class Elt {
     }
 
     // size returns the number of bytes of a non-zero element in compressed or uncompressed form.
-    static size(g: Group, compressed = true): number {
+    static size(g: GroupSj, compressed = true): number {
         return 1 + (compressed ? g.size : g.size * 2)
     }
 
     // Deserializes an element in compressed form.
-    private static deserComp(g: Group, bytes: Uint8Array): Elt {
+    private static deserComp(g: GroupSj, bytes: Uint8Array): EltSj {
         const array = Array.from(bytes.subarray(1))
         const bits = sjcl.codec.bytes.toBits(array)
         const curve = getCurve(g.id)
@@ -333,39 +346,39 @@ export class Elt {
         }
         const point = new sjcl.ecc.point(curve, new curve.field(x), new curve.field(y))
         if (!point.isValid()) {
-            throw errDeserialization(Elt)
+            throw errDeserialization(EltSj)
         }
-        return new Elt(g, point)
+        return new EltSj(g, point)
     }
 
     // Deserializes an element in uncompressed form.
-    private static deserUnComp(g: Group, bytes: Uint8Array): Elt {
+    private static deserUnComp(g: GroupSj, bytes: Uint8Array): EltSj {
         const array = Array.from(bytes.subarray(1))
         const b = sjcl.codec.bytes.toBits(array)
         const curve = getCurve(g.id)
         const point = curve.fromBits(b)
         point.x.fullReduce()
         point.y.fullReduce()
-        return new Elt(g, point)
+        return new EltSj(g, point)
     }
 
     // Deserializes an element, handles both compressed and uncompressed forms.
-    static deserialize(g: Group, bytes: Uint8Array): Elt {
+    static deserialize(g: GroupSj, bytes: Uint8Array): EltSj {
         const len = bytes.length
         switch (true) {
             case len === 1 && bytes[0] === 0x00:
                 return g.identity()
             case len === 1 + g.size && (bytes[0] === 0x02 || bytes[0] === 0x03):
-                return Elt.deserComp(g, bytes)
+                return EltSj.deserComp(g, bytes)
             case len === 1 + 2 * g.size && bytes[0] === 0x04:
-                return Elt.deserUnComp(g, bytes)
+                return EltSj.deserUnComp(g, bytes)
             default:
-                throw errDeserialization(Elt)
+                throw errDeserialization(EltSj)
         }
     }
 
     private static async hashToField(
-        g: Group,
+        g: GroupSj,
         msg: Uint8Array,
         dst: Uint8Array,
         count: number
@@ -383,7 +396,7 @@ export class Elt {
         return u
     }
 
-    private static sswu(g: Group, u: sjcl.bn): Elt {
+    private static sswu(g: GroupSj, u: sjcl.bn): EltSj {
         // Simplified SWU method.
         // Appendix F.2 of draft-irtf-cfrg-hash-to-curve-14
         // https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#appendix-F.2
@@ -397,9 +410,11 @@ export class Elt {
             x.fullReduce()
             return x.getLimb(0) & 1
         }
+
         function cmov(x: sjcl.bn, y: sjcl.bn, b: boolean): sjcl.bn {
             return b ? y : x
         }
+
         // Input: u and v, elements of F, where v != 0.
         // Output: (isQR, root), where
         //   isQR = True  and root = sqrt(u / v) if (u / v) is square in F, and
@@ -452,39 +467,35 @@ export class Elt {
         if (!point.isValid()) {
             throw new Error('point not in curve')
         }
-        return new Elt(g, point)
+        return new EltSj(g, point)
     }
 
-    static async hash(g: Group, msg: Uint8Array, dst: Uint8Array): Promise<Elt> {
-        const u = await Elt.hashToField(g, msg, dst, 2)
-        const Q0 = Elt.sswu(g, u[0])
-        const Q1 = Elt.sswu(g, u[1])
+    static async hash(g: GroupSj, msg: Uint8Array, dst: Uint8Array): Promise<EltSj> {
+        const u = await EltSj.hashToField(g, msg, dst, 2)
+        const Q0 = EltSj.sswu(g, u[0])
+        const Q1 = EltSj.sswu(g, u[1])
         return Q0.add(Q1)
     }
 }
 
-export type GroupID = typeof Group.ID[keyof typeof Group.ID]
+class GroupSj implements Group {
+    static readonly Elt = EltSj
+    static readonly Scalar = ScalarSj
+    static readonly ID = GroupIDs
+    static readonly getID = getGroupID
 
-export class Group {
-    static ID = {
-        P256: 'P-256',
-        P384: 'P-384',
-        P521: 'P-521'
-    } as const
-
-    public readonly id: GroupID
-
-    public readonly size: number
+    readonly id: GroupID
+    readonly size: number
 
     constructor(gid: GroupID) {
         switch (gid) {
-            case Group.ID.P256:
+            case GroupSj.ID.P256:
                 this.size = 32
                 break
-            case Group.ID.P384:
+            case GroupSj.ID.P384:
                 this.size = 48
                 break
-            case Group.ID.P521:
+            case GroupSj.ID.P521:
                 this.size = 66
                 break
             default:
@@ -493,49 +504,76 @@ export class Group {
         this.id = gid
     }
 
-    static getID(id: string): GroupID {
-        switch (id) {
-            case 'P-256':
-                return Group.ID.P256
-            case 'P-384':
-                return Group.ID.P384
-            case 'P-521':
-                return Group.ID.P521
-            default:
-                throw errBadGroup(id)
-        }
+    newScalar(): ScalarSj {
+        return ScalarSj.new(this)
     }
 
-    newScalar(): Scalar {
-        return Scalar.new(this)
-    }
-
-    newElt(): Elt {
+    newElt(): EltSj {
         return this.identity()
     }
 
-    identity(): Elt {
-        return Elt.new(this)
+    identity(): EltSj {
+        return EltSj.new(this)
     }
 
-    generator(): Elt {
-        return Elt.gen(this)
+    generator(): EltSj {
+        return EltSj.gen(this)
     }
 
-    mulGen(s: Scalar): Elt {
-        return Elt.gen(this).mul(s)
+    mulGen(s: ScalarSj): EltSj {
+        return EltSj.gen(this).mul(s)
     }
 
-    randomScalar(): Promise<Scalar> {
+    randomScalar(): Promise<ScalarSj> {
         const msg = crypto.getRandomValues(new Uint8Array(this.size))
-        return Scalar.hash(this, msg, new Uint8Array())
+        return ScalarSj.hash(this, msg, new Uint8Array())
     }
 
-    hashToGroup(msg: Uint8Array, dst: Uint8Array): Promise<Elt> {
-        return Elt.hash(this, msg, dst)
+    hashToGroup(msg: Uint8Array, dst: Uint8Array): Promise<EltSj> {
+        return EltSj.hash(this, msg, dst)
     }
 
-    hashToScalar(msg: Uint8Array, dst: Uint8Array): Promise<Scalar> {
-        return Scalar.hash(this, msg, dst)
+    hashToScalar(msg: Uint8Array, dst: Uint8Array): Promise<ScalarSj> {
+        return ScalarSj.hash(this, msg, dst)
+    }
+
+    get eltDes() {
+        return {
+            size: (compressed?: boolean): number => {
+                return EltSj.size(this, compressed)
+            },
+            deserialize: (b: Uint8Array): EltSj => {
+                return EltSj.deserialize(this, b)
+            }
+        }
+    }
+
+    get scalarDes() {
+        return {
+            size: (): number => {
+                return ScalarSj.size(this)
+            },
+            deserialize: (b: Uint8Array): ScalarSj => {
+                return ScalarSj.deserialize(this, b)
+            }
+        }
+    }
+
+    desElt(bytes: Uint8Array): EltSj {
+        return EltSj.deserialize(this, bytes)
+    }
+
+    desScalar(bytes: Uint8Array): ScalarSj {
+        return ScalarSj.deserialize(this, bytes)
+    }
+
+    eltSize(compressed?: boolean): number {
+        return EltSj.size(this, compressed)
+    }
+
+    scalarSize(): number {
+        return ScalarSj.size(this)
     }
 }
+
+export const GroupConsSjcl: GroupCons = GroupSj

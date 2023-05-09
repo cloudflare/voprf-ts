@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Elt, Scalar } from './group.js'
+import { Elt, Scalar } from './groupTypes.js'
 import { Evaluation, EvaluationRequest, FinalizeData, ModeID, Oprf, SuiteID } from './oprf.js'
 
 import { zip } from './util.js'
@@ -76,7 +76,7 @@ export class VOPRFClient extends baseClient {
         if (!evaluation.proof) {
             throw new Error('no proof provided')
         }
-        const pkS = Elt.deserialize(this.gg, this.pubKeyServer)
+        const pkS = this.gg.desElt(this.pubKeyServer)
 
         const n = finData.inputs.length
         if (evaluation.evaluated.length !== n) {
@@ -104,7 +104,7 @@ export class POPRFClient extends baseClient {
     private async pointFromInfo(info: Uint8Array): Promise<Elt> {
         const m = await this.scalarFromInfo(info)
         const T = this.gg.mulGen(m)
-        const pkS = Elt.deserialize(this.gg, this.pubKeyServer)
+        const pkS = this.gg.desElt(this.pubKeyServer)
         const tw = pkS.add(T)
         if (tw.isIdentity()) {
             throw new Error('invalid info')

@@ -7,15 +7,15 @@ import {
     Evaluation,
     EvaluationRequest,
     FinalizeData,
+    generatePublicKey,
+    Oprf,
     OPRFClient,
     OPRFServer,
-    Oprf,
     POPRFClient,
     POPRFServer,
+    randomPrivateKey,
     VOPRFClient,
-    VOPRFServer,
-    generatePublicKey,
-    randomPrivateKey
+    VOPRFServer
 } from '../src/index.js'
 
 import { serdeClass } from './util.js'

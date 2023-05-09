@@ -4,7 +4,7 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import { DLEQParams, DLEQProver } from './dleq.js'
-import { Elt, Scalar } from './group.js'
+import { Elt, Scalar } from './groupTypes.js'
 import { Evaluation, EvaluationRequest, ModeID, Oprf, SuiteID } from './oprf.js'
 import { ctEqual, zip } from './util.js'
 
@@ -21,7 +21,7 @@ class baseServer extends Oprf {
     protected doBlindEvaluation(blinded: Elt, key: Uint8Array): Promise<Elt> {
         return this.supportsWebCryptoOPRF
             ? this.blindEvaluateWebCrypto(blinded, key)
-            : Promise.resolve(this.blindEvaluateSJCL(blinded, key))
+            : Promise.resolve(this.blindEvaluateGroup(blinded, key))
     }
 
     private async blindEvaluateWebCrypto(blinded: Elt, key: Uint8Array): Promise<Elt> {
@@ -38,16 +38,16 @@ class baseServer extends Oprf {
         // webcrypto accepts only compressed points.
         const compressed = blinded.serialize(true)
         const evalBytes = new Uint8Array(await crypto.subtle.sign('OPRF', crKey, compressed))
-        return Elt.deserialize(this.gg, evalBytes)
+        return this.gg.desElt(evalBytes)
     }
 
-    private blindEvaluateSJCL(blinded: Elt, key: Uint8Array): Elt {
-        return blinded.mul(Scalar.deserialize(this.gg, key))
+    private blindEvaluateGroup(blinded: Elt, key: Uint8Array): Elt {
+        return blinded.mul(this.gg.desScalar(key))
     }
 
     protected async secretFromInfo(info: Uint8Array): Promise<[Scalar, Scalar]> {
         const m = await this.scalarFromInfo(info)
-        const skS = Scalar.deserialize(this.gg, this.privateKey)
+        const skS = this.gg.desScalar(this.privateKey)
         const t = m.add(skS)
         if (t.isZero()) {
             throw new Error('inverse of zero')
@@ -104,7 +104,7 @@ export class VOPRFServer extends baseServer {
             req.blinded.map((b) => this.doBlindEvaluation(b, this.privateKey))
         )
         const prover = new DLEQProver(this.constructDLEQParams())
-        const skS = Scalar.deserialize(this.gg, this.privateKey)
+        const skS = this.gg.desScalar(this.privateKey)
         const pkS = this.gg.mulGen(skS)
         const proof = await prover.prove_batch(
             skS,
