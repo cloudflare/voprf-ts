@@ -71,7 +71,7 @@ class wrapPOPRFClient extends POPRFClient {
 
 // Test vectors from https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf
 // https://tools.ietf.org/html/draft-irtf-cfrg-voprf-11
-describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]) => {
+describe.each(allVectors)('test-vectors', (testVector: (typeof allVectors)[number]) => {
     const mode = testVector.mode as ModeID
     const txtMode = Object.entries(Oprf.Mode)[mode as number][0]
     const describe_or_skip = (Object.values(Oprf.Suite) as readonly string[]).includes(
@@ -115,7 +115,7 @@ describe.each(allVectors)('test-vectors', (testVector: typeof allVectors[number]
 
         const { vectors } = testVector
 
-        describe.each(vectors)('vec$#', (vi: typeof vectors[number]) => {
+        describe.each(vectors)('vec$#', (vi: (typeof vectors)[number]) => {
             it('protocol', async () => {
                 // Creates a mock for randomBlinder method to
                 // inject the blind value given by the test vector.

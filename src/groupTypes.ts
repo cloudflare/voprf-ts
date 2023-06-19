@@ -1,10 +1,15 @@
+// Copyright (c) 2021 Cloudflare, Inc. and contributors.
+// Copyright (c) 2021 Cloudflare, Inc.
+// Licensed under the BSD-3-Clause license found in the LICENSE file or
+// at https://opensource.org/licenses/BSD-3-Clause
+
 export const GroupIDs = {
     P256: 'P-256',
     P384: 'P-384',
     P521: 'P-521'
 } as const
 
-export type GroupID = typeof GroupIDs[keyof typeof GroupIDs]
+export type GroupID = (typeof GroupIDs)[keyof typeof GroupIDs]
 
 export function errBadGroup(X: string) {
     return new Error(`group: bad group name ${X}.`)
