@@ -8,5 +8,8 @@
         "./test/jest.setup-file.js"
     ],
     "collectCoverage": true,
+    "collectCoverageFrom": [
+        "!**/*.json"
+    ],
     "verbose": true
 }

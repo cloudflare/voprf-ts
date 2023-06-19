@@ -15,8 +15,8 @@ import {
     toU16LenPrefixUint8Array
 } from './util.js'
 
-export type ModeID = typeof Oprf.Mode[keyof typeof Oprf.Mode]
-export type SuiteID = typeof Oprf.Suite[keyof typeof Oprf.Suite]
+export type ModeID = (typeof Oprf.Mode)[keyof typeof Oprf.Mode]
+export type SuiteID = (typeof Oprf.Suite)[keyof typeof Oprf.Suite]
 
 function assertNever(name: string, x: unknown): never {
     throw new Error(`unexpected ${name} identifier: ${x}`)
