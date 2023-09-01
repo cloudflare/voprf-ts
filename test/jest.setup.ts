@@ -7,5 +7,5 @@
 import { webcrypto } from 'node:crypto'
 
 if (typeof crypto === 'undefined') {
-    global.crypto = webcrypto
+    global.crypto = webcrypto as unknown as Crypto
 }
