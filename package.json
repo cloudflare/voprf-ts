@@ -13,8 +13,10 @@
     "private": false,
     "main": "./lib/cjs/src/index.js",
     "module": "./lib/esm/src/index.js",
+    "types": "./lib/esm/src/index.d.ts",
     "exports": {
         ".": {
+            "default": "./lib/cjs/src/index.js",
             "require": "./lib/cjs/src/index.js",
             "import": "./lib/esm/src/index.js"
         },
@@ -23,7 +25,6 @@
             "import" : "./lib/esm/src/groupNoble.js"
         }
     },
-    "types": "./lib/esm/src/index.d.ts",
     "files": [
         "lib/*/src/**/*.!(tsbuildinfo)",
         "webcrypto.md"
