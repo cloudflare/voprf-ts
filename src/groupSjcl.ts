@@ -102,7 +102,10 @@ function getCurve(gid: GroupID): sjcl.ecc.curve {
 class ScalarSj implements Scalar {
     private readonly order: sjcl.bn
 
-    private constructor(public readonly g: GroupSj, private readonly k: sjcl.bn) {
+    private constructor(
+        public readonly g: GroupSj,
+        private readonly k: sjcl.bn
+    ) {
         this.order = getCurve(this.g.id).r
     }
 
@@ -243,7 +246,10 @@ function getHashParams(gid: GroupID): HashParams {
 }
 
 class EltSj implements Elt {
-    private constructor(public readonly g: GroupSj, private readonly p: sjcl.ecc.point) {}
+    private constructor(
+        public readonly g: GroupSj,
+        private readonly p: sjcl.ecc.point
+    ) {}
 
     static new(g: GroupSj): EltSj {
         return new EltSj(g, new sjcl.ecc.point(getCurve(g.id)))

@@ -96,7 +96,10 @@ class ScalarNb implements Scalar {
     private readonly field: FieldFn
     public readonly k: bigint
 
-    private constructor(public readonly g: GroupNb, k: bigint) {
+    private constructor(
+        public readonly g: GroupNb,
+        k: bigint
+    ) {
         this.field = this.g.params.scalarField
         this.k = this.field.create(k)
     }
@@ -167,7 +170,10 @@ class ScalarNb implements Scalar {
 }
 
 class EltNb implements Elt {
-    private constructor(public readonly g: GroupNb, private readonly p: ProjPointType<bigint>) {}
+    private constructor(
+        public readonly g: GroupNb,
+        private readonly p: ProjPointType<bigint>
+    ) {}
 
     static new(g: GroupNb): EltNb {
         return new EltNb(g, g.params.Point.ZERO)
