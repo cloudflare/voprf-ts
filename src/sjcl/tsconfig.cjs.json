@@ -1,0 +1,4 @@
+{
+    "extends": ["../../tsconfig.cjs.json", "./tsconfig.compilerOptions.json"],
+    "files": ["index.js"]
+}

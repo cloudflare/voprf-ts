@@ -6,16 +6,7 @@
 import { checkSize, joinAll, xor } from './util.js'
 
 import sjcl from './sjcl/index.js'
-import {
-    Elt,
-    errBadGroup,
-    getGroupID,
-    Group,
-    GroupCons,
-    GroupID,
-    GroupIDs,
-    Scalar
-} from './groupTypes.js'
+import { Elt, errBadGroup, Group, GroupCons, GroupID, GroupIDs, Scalar } from './groupTypes.js'
 
 function errDeserialization(T: { name: string }) {
     return new Error(`group: deserialization of ${T.name} failed.`)
@@ -99,7 +90,7 @@ function getCurve(gid: GroupID): sjcl.ecc.curve {
     }
 }
 
-export class ScalarSj implements Scalar {
+class ScalarSj implements Scalar {
     private readonly order: sjcl.bn
 
     private constructor(public readonly g: GroupSj, private readonly k: sjcl.bn) {
@@ -242,7 +233,7 @@ function getHashParams(gid: GroupID): HashParams {
     }
 }
 
-export class EltSj implements Elt {
+class EltSj implements Elt {
     private constructor(public readonly g: GroupSj, private readonly p: sjcl.ecc.point) {}
 
     static new(g: GroupSj): EltSj {
@@ -482,7 +473,9 @@ class GroupSj implements Group {
     static readonly Elt = EltSj
     static readonly Scalar = ScalarSj
     static readonly ID = GroupIDs
-    static readonly getID = getGroupID
+    static fromID(gid: GroupID) {
+        return new this(gid)
+    }
 
     readonly id: GroupID
     readonly size: number

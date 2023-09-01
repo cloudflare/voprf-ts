@@ -15,19 +15,6 @@ export function errBadGroup(X: string) {
     return new Error(`group: bad group name ${X}.`)
 }
 
-export function getGroupID(id: string): GroupID {
-    switch (id) {
-        case 'P-256':
-            return GroupIDs.P256
-        case 'P-384':
-            return GroupIDs.P384
-        case 'P-521':
-            return GroupIDs.P521
-        default:
-            throw errBadGroup(id)
-    }
-}
-
 export interface Scalar {
     g: Group
 
@@ -107,9 +94,8 @@ export interface Group extends SerializationHelpers {
 }
 
 export interface GroupCons {
-    new (id: GroupID): Group
+    fromID(id: GroupID): Group
     ID: typeof GroupIDs
-    getID: typeof getGroupID
     Elt: EltCons
     Scalar: ScalarCons
 }

@@ -1,12 +1,5 @@
 {
-    "compilerOptions": {
-        "declaration": false,
-        "declarationMap": false,
-        "composite": false,
-        "sourceMap": false,
-        "allowJs": true
-    },
-    "extends": "../../tsconfig.json",
+    "extends": ["../../tsconfig.json", "./tsconfig.compilerOptions.json"],
     "files": [
         "index.js"
     ]
