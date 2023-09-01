@@ -301,21 +301,14 @@ class GroupNb implements Group {
         return ScalarNb.hash(this, msg, dst)
     }
 
-    eltDes: Deserializer<EltNb> = {
-        size: (compressed?: boolean) => {
-            return this.eltSize(compressed)
-        },
-        deserialize: (b: Uint8Array) => {
-            return this.desElt(b)
-        }
+    readonly eltDes: Deserializer<EltNb> = {
+        size: (compressed) => this.eltSize(compressed),
+        deserialize: (b) => this.desElt(b)
     }
-    scalarDes: Deserializer<ScalarNb> = {
-        size: () => {
-            return this.scalarSize()
-        },
-        deserialize: (b: Uint8Array) => {
-            return this.desScalar(b)
-        }
+
+    readonly scalarDes: Deserializer<ScalarNb> = {
+        size: () => this.scalarSize(),
+        deserialize: (b) => this.desScalar(b)
     }
 
     desElt(bytes: Uint8Array): EltNb {
