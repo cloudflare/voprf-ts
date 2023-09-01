@@ -68,7 +68,10 @@ export class OPRFClient extends baseClient {
 }
 
 export class VOPRFClient extends baseClient {
-    constructor(suite: SuiteID, private readonly pubKeyServer: Uint8Array) {
+    constructor(
+        suite: SuiteID,
+        private readonly pubKeyServer: Uint8Array
+    ) {
         super(Oprf.Mode.VOPRF, suite)
     }
 
@@ -97,7 +100,10 @@ export class VOPRFClient extends baseClient {
 }
 
 export class POPRFClient extends baseClient {
-    constructor(suite: SuiteID, private readonly pubKeyServer: Uint8Array) {
+    constructor(
+        suite: SuiteID,
+        private readonly pubKeyServer: Uint8Array
+    ) {
         super(Oprf.Mode.POPRF, suite)
     }
 
