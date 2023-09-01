@@ -22,7 +22,7 @@ export async function benchGroup(bs: Benchmark.Suite) {
     const dst = te.encode('dst')
 
     for (const id of Object.values(Oprf.Group.ID)) {
-        const gg = new Oprf.Group(id)
+        const gg = Oprf.Group.fromID(id)
         const k = await gg.randomScalar()
         const P = gg.mulGen(k)
         const Q = P.mul(k)
