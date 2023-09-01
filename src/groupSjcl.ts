@@ -6,7 +6,16 @@
 import { checkSize, joinAll, xor } from './util.js'
 
 import sjcl from './sjcl/index.js'
-import { Elt, errBadGroup, Group, GroupCons, GroupID, GroupIDs, Scalar } from './groupTypes.js'
+import {
+    Deserializer,
+    Elt,
+    errBadGroup,
+    Group,
+    GroupCons,
+    GroupID,
+    GroupIDs,
+    Scalar
+} from './groupTypes.js'
 
 function errDeserialization(T: { name: string }) {
     return new Error(`group: deserialization of ${T.name} failed.`)
@@ -530,25 +539,17 @@ class GroupSj implements Group {
         return ScalarSj.hash(this, msg, dst)
     }
 
-    get eltDes() {
+    get eltDes(): Deserializer<EltSj> {
         return {
-            size: (compressed?: boolean): number => {
-                return EltSj.size(this, compressed)
-            },
-            deserialize: (b: Uint8Array): EltSj => {
-                return EltSj.deserialize(this, b)
-            }
+            size: (compressed): number => EltSj.size(this, compressed),
+            deserialize: (b) => EltSj.deserialize(this, b)
         }
     }
 
-    get scalarDes() {
+    get scalarDes(): Deserializer<ScalarSj> {
         return {
-            size: (): number => {
-                return ScalarSj.size(this)
-            },
-            deserialize: (b: Uint8Array): ScalarSj => {
-                return ScalarSj.deserialize(this, b)
-            }
+            size: () => ScalarSj.size(this),
+            deserialize: (b) => ScalarSj.deserialize(this, b)
         }
     }
 
