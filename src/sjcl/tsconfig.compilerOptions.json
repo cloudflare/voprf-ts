@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "declaration": false,
+        "declarationMap": false,
+        "composite": false,
+        "sourceMap": false,
+        "allowJs": true
+    }
+}

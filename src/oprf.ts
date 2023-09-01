@@ -78,7 +78,7 @@ export abstract class Oprf {
         }
     }
     static getGroup(suite: SuiteID): Group {
-        return new Oprf.Group(Oprf.getParams(suite)[1])
+        return Oprf.Group.fromID(Oprf.getParams(suite)[1])
     }
     static getHash(suite: SuiteID): string {
         return Oprf.getParams(suite)[2]
@@ -104,7 +104,7 @@ export abstract class Oprf {
     constructor(mode: ModeID, suite: SuiteID) {
         const [ID, gid, hash] = Oprf.getParams(suite)
         this.ID = ID
-        this.gg = new Oprf.Group(gid)
+        this.gg = Oprf.Group.fromID(gid)
         this.hash = hash
         this.mode = Oprf.validateMode(mode)
     }

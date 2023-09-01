@@ -3,9 +3,10 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Oprf, OPRFClient, OPRFServer, randomPrivateKey } from '../src/index.js'
-
 import { jest } from '@jest/globals'
+
+import { GroupID, Oprf, OPRFClient, OPRFServer, randomPrivateKey } from '../src/index.js'
+import { describeGroupTests } from './describeGroupTests.js'
 
 const { sign, importKey } = crypto.subtle
 
@@ -32,7 +33,8 @@ function mockImportKey(...x: Parameters<typeof importKey>): ReturnType<typeof im
 function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
     const [algorithm, key, data] = x
     if (algorithm === 'OPRF') {
-        const g = new Oprf.Group(Oprf.Group.getID((key.algorithm as EcdsaParams).name))
+        const algorithmName = (key.algorithm as EcdsaParams).name
+        const g = Oprf.Group.fromID(algorithmName as GroupID)
         const P = g.desElt(new Uint8Array(data as ArrayBuffer))
         const serSk = new Uint8Array((key as CryptoKeyWithBuffer).keyData)
         const sk = g.desScalar(serSk)
@@ -43,26 +45,30 @@ function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
     throw new Error('bad algorithm')
 }
 
-describe.each(Object.entries(Oprf.Suite))('supportsWebCrypto', (name, id) => {
-    beforeAll(() => {
-        jest.spyOn(crypto.subtle, 'importKey').mockImplementation(mockImportKey)
-        jest.spyOn(crypto.subtle, 'sign').mockImplementation(mockSign)
-    })
+describeGroupTests((_g) => {
+    describe.each(Object.entries(Oprf.Suite))('supportsWebCrypto', (name, id) => {
+        beforeAll(() => {
+            jest.spyOn(crypto.subtle, 'importKey').mockImplementation(mockImportKey)
+            jest.spyOn(crypto.subtle, 'sign').mockImplementation(mockSign)
+        })
 
-    it(`${name}`, async () => {
-        const te = new TextEncoder()
-        const privateKey = await randomPrivateKey(id)
-        const server = new OPRFServer(id, privateKey)
-        const client = new OPRFClient(id)
-        const input = te.encode('This is the client input')
-        const [, reqEval] = await client.blind([input])
+        it(`${name}`, async () => {
+            const te = new TextEncoder()
+            const privateKey = await randomPrivateKey(id)
+            const server = new OPRFServer(id, privateKey)
+            const client = new OPRFClient(id)
+            const input = te.encode('This is the client input')
+            const [, reqEval] = await client.blind([input])
 
-        server.supportsWebCryptoOPRF = false
-        const ev0 = await server.blindEvaluate(reqEval)
+            server.supportsWebCryptoOPRF = false
+            const ev0 = await server.blindEvaluate(reqEval)
 
-        server.supportsWebCryptoOPRF = true
-        const ev1 = await server.blindEvaluate(reqEval)
+            server.supportsWebCryptoOPRF = true
+            const ev1 = await server.blindEvaluate(reqEval)
 
-        expect(ev0).toEqual(ev1)
+            // bigint can't be serialized by jest-worker
+            // see: https://github.com/jestjs/jest/issues/11617
+            expect(ev0.isEqual(ev1)).toBe(true)
+        })
     })
 })

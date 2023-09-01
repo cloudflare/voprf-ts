@@ -4,8 +4,8 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import { GroupConsSjcl } from './groupSjcl.js'
-import { Oprf } from './oprf.js'
 
+import { Oprf } from './oprf.js'
 Oprf.Group = GroupConsSjcl
 
 export * from './groupTypes.js'

@@ -5,7 +5,7 @@
     "testEnvironment": "node",
     "transform": {},
     "setupFiles": [
-        "./test/jest.setup-file.js"
+        "./test/jest.setup-file.mjs"
     ],
     "collectCoverage": true,
     "collectCoverageFrom": [
