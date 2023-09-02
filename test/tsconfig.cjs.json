@@ -10,6 +10,9 @@
     "references": [
         {
             "path": "../tsconfig.cjs.json"
+        },
+        {
+            "path": "../mockCrypto/tsconfig.cjs.json"
         }
     ]
 }
