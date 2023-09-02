@@ -26,7 +26,7 @@
         }
     },
     "files": [
-        "lib/*/src/**/*.!(tsbuildinfo)",
+        "lib/**/src/**/!(*.tsbuildinfo)",
         "webcrypto.md"
     ],
     "keywords": [
@@ -66,9 +66,9 @@
         "build": "tsc -b . tsconfig.cjs.json",
         "clean": "tsc -b --clean . test ./tsconfig.cjs.json test/tsconfig.cjs.json bench examples",
         "test": "npm run test:esm && npm run test:cjs",
-        "test:esm": "npm run test:mock && tsc -b test && node --experimental-vm-modules node_modules/.bin/jest --ci --selectProjects esm",
-        "test:cjs": "npm run test:mock && tsc -b test/tsconfig.cjs.json && node node_modules/.bin/jest --ci --selectProjects cjs",
-        "test:mock": "tsc -b mockCrypto mockCrypto/tsconfig.cjs.json",
+        "test:esm": "npm run test:build && node --experimental-vm-modules node_modules/.bin/jest --ci --selectProjects esm",
+        "test:cjs": "npm run test:build && node node_modules/.bin/jest --ci --selectProjects cjs",
+        "test:build": "tsc -b test test/tsconfig.cjs.json",
         "examples": "tsc -b examples && node ./lib/esm/examples/index.js",
         "lint": "eslint .",
         "bench": "tsc -b bench && node ./lib/esm/bench/index.js",
