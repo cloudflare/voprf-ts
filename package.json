@@ -1,6 +1,6 @@
 {
     "name": "@cloudflare/voprf-ts",
-    "version": "0.21.0",
+    "version": "0.21.1",
     "description": "voprf-ts: A TypeScript Library for Oblivious Pseudorandom Functions (OPRF)",
     "author": "Armando Faz <armfazh@cloudflare.com>",
     "maintainers": [
