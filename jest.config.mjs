@@ -10,7 +10,7 @@ function getConfig(version) {
         moduleFileExtensions: ['js'],
         testEnvironment: 'node',
         transform: {},
-        setupFiles: [`./lib/${version}/test/jest.setup.js`],
+        setupFiles: [`./lib/${version}/mockCrypto/mock_crypto.js`],
         collectCoverage: true,
         coverageDirectory: `coverage/${version}`,
         verbose: true
