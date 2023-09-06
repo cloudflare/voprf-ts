@@ -7,16 +7,15 @@ function getConfig(version) {
     return {
         displayName: version,
         roots: [`./lib/${version}/test`],
-        moduleFileExtensions: ['js'],
-        testEnvironment: 'node',
-        transform: {},
-        setupFiles: [`./lib/${version}/mockCrypto/mock_crypto.js`],
-        collectCoverage: true,
-        coverageDirectory: `coverage/${version}`,
-        verbose: true
+        setupFiles: [`./lib/${version}/mockCrypto/mock_crypto.js`]
     }
 }
 
 export default {
+    moduleFileExtensions: ['js'],
+    testEnvironment: 'node',
+    transform: {},
+    collectCoverage: true,
+    verbose: true,
     projects: [getConfig('esm'), getConfig('cjs')]
 }
