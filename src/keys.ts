@@ -9,7 +9,7 @@ import { Scalar } from './groupTypes.js'
 
 export function getKeySizes(id: SuiteID): { Nsk: number; Npk: number } {
     const gg = Oprf.getGroup(id)
-    return { Nsk: gg.size, Npk: 1 + gg.size }
+    return { Nsk: gg.scalarSize(), Npk: gg.eltSize(true) }
 }
 
 export function validatePrivateKey(id: SuiteID, privateKey: Uint8Array): boolean {
@@ -67,7 +67,7 @@ export function generatePublicKey(id: SuiteID, privateKey: Uint8Array): Uint8Arr
     const gg = Oprf.getGroup(id)
     const priv = gg.desScalar(privateKey)
     const pub = gg.mulGen(priv)
-    return pub.serialize()
+    return pub.serialize(true)
 }
 
 export async function generateKeyPair(

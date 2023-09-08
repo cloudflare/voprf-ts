@@ -3,13 +3,20 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-export const GroupIDs = {
+export const Groups = {
+    // P256_XMD:SHA-256_SSWU_RO_
     P256: 'P-256',
+    // P384_XMD:SHA-384_SSWU_RO_
     P384: 'P-384',
-    P521: 'P-521'
+    // P521_XMD:SHA-512_SSWU_RO_
+    P521: 'P-521',
+    // ristretto255_XMD:SHA-512_R255MAP_RO_
+    RISTRETTO255: 'ristretto255',
+    // decaf448_XOF:SHAKE256_D448MAP_RO_
+    DECAF448: 'decaf448'
 } as const
 
-export type GroupID = (typeof GroupIDs)[keyof typeof GroupIDs]
+export type GroupID = (typeof Groups)[keyof typeof Groups]
 
 export function errBadGroup(X: string) {
     return new Error(`group: bad group name ${X}.`)
@@ -33,11 +40,6 @@ export interface Scalar {
     serialize(): Uint8Array
 }
 
-export interface ScalarCons {
-    size(g: Group): number
-    deserialize(g: Group, bytes: Uint8Array): Scalar
-}
-
 export interface Elt {
     g: Group
 
@@ -56,12 +58,6 @@ export interface Elt {
     serialize(compressed?: boolean): Uint8Array
 }
 
-export interface EltCons {
-    // Used by serializer
-    size(g: Group, compressed?: boolean): number
-    deserialize(g: Group, bytes: Uint8Array): Elt
-}
-
 export interface Deserializer<T> {
     size(compressed?: boolean): number
 
@@ -70,32 +66,38 @@ export interface Deserializer<T> {
 
 export interface SerializationHelpers {
     desElt(bytes: Uint8Array): Elt
+
     desScalar(bytes: Uint8Array): Scalar
 
     eltDes: Deserializer<Elt>
     scalarDes: Deserializer<Scalar>
 
     eltSize(compressed?: boolean): number
+
     scalarSize(): number
 }
 
 export interface Group extends SerializationHelpers {
     id: GroupID
-    size: number
 
     newScalar(): Scalar
+
     newElt(): Elt
+
     identity(): Elt
+
     generator(): Elt
+
     mulGen(s: Scalar): Elt
+
     randomScalar(): Promise<Scalar>
+
     hashToGroup(msg: Uint8Array, dst: Uint8Array): Promise<Elt>
+
     hashToScalar(msg: Uint8Array, dst: Uint8Array): Promise<Scalar>
 }
 
 export interface GroupCons {
     fromID(id: GroupID): Group
-    ID: typeof GroupIDs
-    Elt: EltCons
-    Scalar: ScalarCons
+    supportedGroups: Array<GroupID>
 }

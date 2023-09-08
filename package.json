@@ -20,9 +20,9 @@
             "require": "./lib/cjs/src/index.js",
             "import": "./lib/esm/src/index.js"
         },
-        "./group-noble": {
-            "require": "./lib/cjs/src/groupNoble.js",
-            "import": "./lib/esm/src/groupNoble.js"
+        "./crypto-noble": {
+            "require": "./lib/cjs/src/cryptoNoble.js",
+            "import": "./lib/esm/src/cryptoNoble.js"
         }
     },
     "files": [

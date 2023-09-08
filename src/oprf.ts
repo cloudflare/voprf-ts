@@ -4,7 +4,7 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import { DLEQParams, DLEQProof } from './dleq.js'
-import { Elt, Group, GroupCons, GroupID, Scalar } from './groupTypes.js'
+import { Elt, Group, GroupCons, GroupID, Groups, Scalar } from './groupTypes.js'
 
 import {
     fromU16LenPrefixDes,
@@ -14,6 +14,8 @@ import {
     toU16LenPrefixClass,
     toU16LenPrefixUint8Array
 } from './util.js'
+import { CryptoProvider, HashID } from './cryptoTypes.js'
+import { CryptoSjcl } from './cryptoSjcl.js'
 
 export type ModeID = (typeof Oprf.Mode)[keyof typeof Oprf.Mode]
 export type SuiteID = (typeof Oprf.Suite)[keyof typeof Oprf.Suite]
@@ -22,16 +24,33 @@ function assertNever(name: string, x: unknown): never {
     throw new Error(`unexpected ${name} identifier: ${x}`)
 }
 
-export abstract class Oprf {
-    private static _Group: GroupCons
-    static get Group(): GroupCons {
-        if (!this._Group) {
-            throw new Error('Must set Oprf.Group to impl of GroupCons')
-        }
-        return this._Group
+function getOprfParams(id: string): readonly [SuiteID, GroupID, HashID, number] {
+    switch (id) {
+        case Oprf.Suite.P256_SHA256:
+            return [Oprf.Suite.P256_SHA256, Groups.P256, 'SHA-256', 32]
+        case Oprf.Suite.P384_SHA384:
+            return [Oprf.Suite.P384_SHA384, Groups.P384, 'SHA-384', 48]
+        case Oprf.Suite.P521_SHA512:
+            return [Oprf.Suite.P521_SHA512, Groups.P521, 'SHA-512', 64]
+        case Oprf.Suite.RISTRETTO255_SHA512:
+            return [Oprf.Suite.RISTRETTO255_SHA512, Groups.RISTRETTO255, 'SHA-512', 64]
+        case Oprf.Suite.DECAF448_SHAKE256:
+            return [Oprf.Suite.DECAF448_SHAKE256, Groups.DECAF448, 'SHAKE256', 64]
+        default:
+            assertNever('Oprf.Suite', id)
     }
-    static set Group(group: GroupCons) {
-        this._Group = group
+}
+
+// testing helper
+export function getSupportedSuites(g: GroupCons): Array<SuiteID> {
+    return Object.values(Oprf.Suite).filter((v) => g.supportedGroups.includes(getOprfParams(v)[1]))
+}
+
+export abstract class Oprf {
+    public static Crypto: CryptoProvider = CryptoSjcl
+
+    public static get Group(): GroupCons {
+        return this.Crypto.Group
     }
 
     static Mode = {
@@ -43,7 +62,9 @@ export abstract class Oprf {
     static Suite = {
         P256_SHA256: 'P256-SHA256',
         P384_SHA384: 'P384-SHA384',
-        P521_SHA512: 'P521-SHA512'
+        P521_SHA512: 'P521-SHA512',
+        RISTRETTO255_SHA512: 'ristretto255-SHA512',
+        DECAF448_SHAKE256: 'decaf448-SHAKE256'
     } as const
 
     static LABELS = {
@@ -65,27 +86,19 @@ export abstract class Oprf {
                 assertNever('Oprf.Mode', m)
         }
     }
-    private static getParams(id: string): readonly [SuiteID, GroupID, string, number] {
-        switch (id) {
-            case Oprf.Suite.P256_SHA256:
-                return [Oprf.Suite.P256_SHA256, Oprf.Group.ID.P256, 'SHA-256', 32]
-            case Oprf.Suite.P384_SHA384:
-                return [Oprf.Suite.P384_SHA384, Oprf.Group.ID.P384, 'SHA-384', 48]
-            case Oprf.Suite.P521_SHA512:
-                return [Oprf.Suite.P521_SHA512, Oprf.Group.ID.P521, 'SHA-512', 64]
-            default:
-                assertNever('Oprf.Suite', id)
-        }
-    }
+
     static getGroup(suite: SuiteID): Group {
-        return Oprf.Group.fromID(Oprf.getParams(suite)[1])
+        return Oprf.Group.fromID(getOprfParams(suite)[1])
     }
+
     static getHash(suite: SuiteID): string {
-        return Oprf.getParams(suite)[2]
+        return getOprfParams(suite)[2]
     }
+
     static getOprfSize(suite: SuiteID): number {
-        return Oprf.getParams(suite)[3]
+        return getOprfParams(suite)[3]
     }
+
     static getDST(mode: ModeID, suite: SuiteID, name: string): Uint8Array {
         const m = Oprf.validateMode(mode)
         const te = new TextEncoder()
@@ -99,10 +112,10 @@ export abstract class Oprf {
     readonly mode: ModeID
     readonly ID: SuiteID
     readonly gg: Group
-    readonly hash: string
+    readonly hash: HashID
 
     constructor(mode: ModeID, suite: SuiteID) {
-        const [ID, gid, hash] = Oprf.getParams(suite)
+        const [ID, gid, hash] = getOprfParams(suite)
         this.ID = ID
         this.gg = Oprf.Group.fromID(gid)
         this.hash = hash
@@ -129,7 +142,7 @@ export abstract class Oprf {
             ...toU16LenPrefix(issuedElement),
             new TextEncoder().encode(Oprf.LABELS.FinalizeDST)
         ])
-        return new Uint8Array(await crypto.subtle.digest(this.hash, hashInput))
+        return await Oprf.Crypto.hash(this.hash, hashInput)
     }
 
     protected scalarFromInfo(info: Uint8Array): Promise<Scalar> {
