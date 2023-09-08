@@ -5,7 +5,14 @@
 
 import { jest } from '@jest/globals'
 
-import { GroupID, Oprf, OPRFClient, OPRFServer, randomPrivateKey } from '../src/index.js'
+import {
+    getSupportedSuites,
+    GroupID,
+    Oprf,
+    OPRFClient,
+    OPRFServer,
+    randomPrivateKey
+} from '../src/index.js'
 import { describeGroupTests } from './describeGroupTests.js'
 
 const { sign, importKey } = crypto.subtle
@@ -45,14 +52,14 @@ function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
     throw new Error('bad algorithm')
 }
 
-describeGroupTests((_g) => {
-    describe.each(Object.entries(Oprf.Suite))('supportsWebCrypto', (name, id) => {
+describeGroupTests((g) => {
+    describe.each(getSupportedSuites(g))('supportsWebCrypto', (id) => {
         beforeAll(() => {
             jest.spyOn(crypto.subtle, 'importKey').mockImplementation(mockImportKey)
             jest.spyOn(crypto.subtle, 'sign').mockImplementation(mockSign)
         })
 
-        it(`${name}`, async () => {
+        it(`${id}`, async () => {
             const te = new TextEncoder()
             const privateKey = await randomPrivateKey(id)
             const server = new OPRFServer(id, privateKey)

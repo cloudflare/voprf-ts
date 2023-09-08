@@ -1,21 +1,29 @@
-import { GroupConsNoble } from '../src/groupNoble.js'
-import { GroupConsSjcl } from '../src/groupSjcl.js'
+import { CryptoNoble } from '../src/cryptoNoble.js'
 import { GroupCons, Oprf } from '../src/index.js'
+import { CryptoSjcl } from '../src/cryptoSjcl.js'
 
 const groupConsMatch = process.env.GROUP_CONS
 
-export const testGroups = (
+export const testProviders = (
     [
-        ['noble', GroupConsNoble],
-        ['sjcl', GroupConsSjcl]
+        ['noble', CryptoNoble],
+        ['sjcl', CryptoSjcl]
     ] as const
 ).filter(([name]) => {
     return !groupConsMatch || name === groupConsMatch
 })
 
 export function describeGroupTests(declare: (group: GroupCons) => void) {
-    describe.each(testGroups)(`Group-%s`, (_groupName, groupCons) => {
-        Oprf.Group = groupCons
-        declare(groupCons)
+    describe.each(testProviders)(`Group-%s`, (_groupName, provider) => {
+        // Will run before other beforeAll hooks (see vectors.test.ts)
+        beforeAll(() => {
+            Oprf.Crypto = provider
+        })
+        // Will run before other tests
+        beforeEach(() => {
+            Oprf.Crypto = provider
+        })
+        Oprf.Crypto = provider
+        declare(provider.Group)
     })
 }

@@ -6,6 +6,7 @@
 import {
     derivePrivateKey,
     generatePublicKey,
+    getSupportedSuites,
     ModeID,
     Oprf,
     OPRFClient,
@@ -51,9 +52,11 @@ class wrapPOPRFServer extends POPRFServer {
     ): ReturnType<OPRFServer['blindEvaluate']> {
         return super.blindEvaluate(r[0], this.info)
     }
+
     async evaluate(input: Uint8Array): Promise<Uint8Array> {
         return super.evaluate(input, this.info)
     }
+
     async verifyFinalize(input: Uint8Array, output: Uint8Array): Promise<boolean> {
         return super.verifyFinalize(input, output, this.info)
     }
@@ -65,25 +68,24 @@ class wrapPOPRFClient extends POPRFClient {
     blind(inputs: Uint8Array[]): ReturnType<OPRFClient['blind']> {
         return super.blind(inputs)
     }
+
     finalize(...r: Parameters<OPRFClient['finalize']>): ReturnType<OPRFClient['finalize']> {
         return super.finalize(...r, this.info)
     }
 }
 
-describeGroupTests((_g) => {
+describeGroupTests((g) => {
     // Test vectors from https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf
     // https://tools.ietf.org/html/draft-irtf-cfrg-voprf-11
     describe.each(allVectors)('test-vectors', (testVector: (typeof allVectors)[number]) => {
         const mode = testVector.mode as ModeID
         const txtMode = Object.entries(Oprf.Mode)[mode as number][0]
-        const describe_or_skip = (Object.values(Oprf.Suite) as readonly string[]).includes(
-            testVector.identifier
-        )
-            ? describe
-            : describe.skip
-        const id = testVector.identifier as SuiteID
 
-        describe_or_skip(`${txtMode}, ${id}`, () => {
+        const supported = getSupportedSuites(g)
+        const id = testVector.identifier as SuiteID
+        const describeOrSkip = supported.includes(id) ? describe : describe.skip
+
+        describeOrSkip(`${txtMode}, ${id}`, () => {
             let skSm: Uint8Array
             let server: OPRFServer | VOPRFServer | wrapPOPRFServer
             let client: OPRFClient | VOPRFClient | wrapPOPRFClient

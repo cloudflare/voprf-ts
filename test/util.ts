@@ -18,6 +18,22 @@ export function serdeClass<
     return t.isEqual(deser)
 }
 
+export function serdesEquals<
+    T extends {
+        serialize: () => Uint8Array
+        isEqual: (t: T) => boolean
+    }
+>(
+    deserializer: {
+        deserialize(b: Uint8Array): T
+    },
+    t: T
+): boolean {
+    const ser = t.serialize()
+    const deser = deserializer.deserialize(ser)
+    return t.isEqual(deser)
+}
+
 export function zip<T>(x: T[], y: T[]): Array<[T, T]> {
     return x.map<[T, T]>((xi, i) => [xi, y[i as number]])
 }

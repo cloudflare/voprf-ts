@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { checkSize, joinAll, xor } from './util.js'
+import { checkSize, compat, errDeserialization, joinAll, xor } from './util.js'
 
 import sjcl from './sjcl/index.js'
 import {
@@ -13,21 +13,9 @@ import {
     Group,
     GroupCons,
     GroupID,
-    GroupIDs,
+    Groups,
     Scalar
 } from './groupTypes.js'
-
-function errDeserialization(T: { name: string }) {
-    return new Error(`group: deserialization of ${T.name} failed.`)
-}
-
-function errGroup(X: GroupID, Y: GroupID) {
-    return new Error(`group: mismatch between groups ${X} and ${Y}.`)
-}
-
-function compat(x: { g: GroupSj }, y: { g: GroupSj }): void | never {
-    if (x.g.id !== y.g.id) throw errGroup(x.g.id, y.g.id)
-}
 
 function hashParams(hash: string): {
     outLenBytes: number // returns the size in bytes of the output.
@@ -88,12 +76,15 @@ async function expandXMD(
 
 function getCurve(gid: GroupID): sjcl.ecc.curve {
     switch (gid) {
-        case GroupSj.ID.P256:
+        case Groups.P256:
             return sjcl.ecc.curves.c256
-        case GroupSj.ID.P384:
+        case Groups.P384:
             return sjcl.ecc.curves.c384
-        case GroupSj.ID.P521:
+        case Groups.P521:
             return sjcl.ecc.curves.c521
+        case Groups.DECAF448:
+        case Groups.RISTRETTO255:
+            throw new Error('group: non-supported ciphersuite')
         default:
             throw errBadGroup(gid)
     }
@@ -109,7 +100,7 @@ class ScalarSj implements Scalar {
         this.order = getCurve(this.g.id).r
     }
 
-    static new(g: GroupSj): ScalarSj {
+    static create(g: GroupSj): ScalarSj {
         return new ScalarSj(g, new sjcl.bn(0))
     }
 
@@ -198,19 +189,19 @@ function getSSWUParams(gid: GroupID): SSWUParams {
     let Z
     let c2
     switch (gid) {
-        case GroupSj.ID.P256:
+        case Groups.P256:
             Z = -10
             // c2 = sqrt(-Z) in GF(p).
             c2 = '0x25ac71c31e27646736870398ae7f554d8472e008b3aa2a49d332cbd81bcc3b80'
 
             break
-        case GroupSj.ID.P384:
+        case Groups.P384:
             Z = -12
             // c2 = sqrt(-Z) in GF(p).
             c2 =
                 '0x2accb4a656b0249c71f0500e83da2fdd7f98e383d68b53871f872fcb9ccb80c53c0de1f8a80f7e1914e2ec69f5a626b3'
             break
-        case GroupSj.ID.P521:
+        case Groups.P521:
             Z = -4
             // c2 = sqrt(-Z) in GF(p).
             c2 = '0x2'
@@ -234,11 +225,11 @@ interface HashParams {
 
 function getHashParams(gid: GroupID): HashParams {
     switch (gid) {
-        case GroupSj.ID.P256:
+        case Groups.P256:
             return { hash: 'SHA-256', L: 48 }
-        case GroupSj.ID.P384:
+        case Groups.P384:
             return { hash: 'SHA-384', L: 72 }
-        case GroupSj.ID.P521:
+        case Groups.P521:
             return { hash: 'SHA-512', L: 98 }
         default:
             throw errBadGroup(gid)
@@ -251,7 +242,7 @@ class EltSj implements Elt {
         private readonly p: sjcl.ecc.point
     ) {}
 
-    static new(g: GroupSj): EltSj {
+    static create(g: GroupSj): EltSj {
         return new EltSj(g, new sjcl.ecc.point(getCurve(g.id)))
     }
 
@@ -485,9 +476,7 @@ class EltSj implements Elt {
 }
 
 class GroupSj implements Group {
-    static readonly Elt = EltSj
-    static readonly Scalar = ScalarSj
-    static readonly ID = GroupIDs
+    static readonly supportedGroups: GroupID[] = [Groups.P256, Groups.P384, Groups.P521]
     static fromID(gid: GroupID) {
         return new this(gid)
     }
@@ -497,13 +486,13 @@ class GroupSj implements Group {
 
     constructor(gid: GroupID) {
         switch (gid) {
-            case GroupSj.ID.P256:
+            case Groups.P256:
                 this.size = 32
                 break
-            case GroupSj.ID.P384:
+            case Groups.P384:
                 this.size = 48
                 break
-            case GroupSj.ID.P521:
+            case Groups.P521:
                 this.size = 66
                 break
             default:
@@ -513,7 +502,7 @@ class GroupSj implements Group {
     }
 
     newScalar(): ScalarSj {
-        return ScalarSj.new(this)
+        return ScalarSj.create(this)
     }
 
     newElt(): EltSj {
@@ -521,7 +510,7 @@ class GroupSj implements Group {
     }
 
     identity(): EltSj {
-        return EltSj.new(this)
+        return EltSj.create(this)
     }
 
     generator(): EltSj {

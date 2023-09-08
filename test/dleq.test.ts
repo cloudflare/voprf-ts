@@ -7,8 +7,9 @@ import { DLEQParams, DLEQProof, DLEQProver, Elt, Oprf, Scalar } from '../src/ind
 import { describeGroupTests } from './describeGroupTests.js'
 import { serdeClass } from './util.js'
 
-describeGroupTests((_g) => {
-    describe.each(Object.entries(Oprf.Group.ID))('DLEQ', (groupName, id) => {
+describeGroupTests((g) => {
+    describe.each(g.supportedGroups)('DLEQ', (id) => {
+        const groupName = id
         const gg = Oprf.Group.fromID(id)
         const params: DLEQParams = { gg, hash: 'SHA-256', dst: 'domain-sep' }
         const Peggy = new DLEQProver(params)

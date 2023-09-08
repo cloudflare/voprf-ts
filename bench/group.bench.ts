@@ -21,7 +21,7 @@ export async function benchGroup(bs: Benchmark.Suite) {
     const msg = te.encode('msg')
     const dst = te.encode('dst')
 
-    for (const id of Object.values(Oprf.Group.ID)) {
+    for (const id of Oprf.Group.supportedGroups) {
         const gg = Oprf.Group.fromID(id)
         const k = await gg.randomScalar()
         const P = gg.mulGen(k)

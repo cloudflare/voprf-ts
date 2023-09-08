@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Deserializer } from './groupTypes.js'
+import { Deserializer, Group, GroupID } from './groupTypes.js'
 
 export function joinAll(a: Uint8Array[]): Uint8Array {
     let size = 0
@@ -126,4 +126,16 @@ export function checkSize<U>(
     if (x.length < T.size(u)) {
         throw new Error(`error deserializing ${T.name}: buffer shorter than expected`)
     }
+}
+
+export function errDeserialization(T: { name: string }) {
+    return new Error(`group: deserialization of ${T.name} failed.`)
+}
+
+export function errGroup(X: GroupID, Y: GroupID) {
+    return new Error(`group: mismatch between groups ${X} and ${Y}.`)
+}
+
+export function compat(x: { g: Group }, y: { g: Group }): void | never {
+    if (x.g.id !== y.g.id) throw errGroup(x.g.id, y.g.id)
 }

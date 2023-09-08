@@ -4,10 +4,10 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import { describeGroupTests } from './describeGroupTests.js'
-import { serdeClass } from './util.js'
+import { serdesEquals } from './util.js'
 
 describeGroupTests((Group) => {
-    describe.each(Object.entries(Group.ID))('%s', (_groupName, id) => {
+    describe.each(Group.supportedGroups)('%s', (id) => {
         const gg = Group.fromID(id)
 
         it('serdeElement', async () => {
@@ -22,20 +22,17 @@ describeGroupTests((Group) => {
 
         it('serdeElementZero', () => {
             const Z = gg.identity()
-
-            expect(serdeClass(Group.Elt, Z, gg)).toBe(true)
+            expect(serdesEquals(gg.eltDes, Z)).toBe(true)
         })
 
         it('serdeScalar', async () => {
             const k = await gg.randomScalar()
-
-            expect(serdeClass(Group.Scalar, k, gg)).toBe(true)
+            expect(serdesEquals(gg.scalarDes, k)).toBe(true)
         })
 
         it('serdeScalarZero', () => {
             const z = gg.newScalar()
-
-            expect(serdeClass(Group.Scalar, z, gg)).toBe(true)
+            expect(serdesEquals(gg.scalarDes, z)).toBe(true)
         })
     })
 })

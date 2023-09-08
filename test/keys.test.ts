@@ -7,20 +7,22 @@ import {
     deriveKeyPair,
     generateKeyPair,
     getKeySizes,
+    getSupportedSuites,
     Oprf,
     validatePrivateKey,
     validatePublicKey
 } from '../src/index.js'
 import { describeGroupTests } from './describeGroupTests.js'
 
-describeGroupTests((_g) => {
-    describe.each(Object.entries(Oprf.Suite))('oprf-keys', (name, id) => {
-        describe(`${name}`, () => {
+describeGroupTests((g) => {
+    describe.each(getSupportedSuites(g))('oprf-keys', (id) => {
+        describe(`${id}`, () => {
             const { Nsk, Npk } = getKeySizes(id)
             const gg = Oprf.getGroup(id)
 
             it('getKeySizes', () => {
-                expect(Nsk).toBe(Npk - 1)
+                expect(Nsk).toBe(gg.scalarSize())
+                expect(Npk).toBe(gg.eltSize(true))
             })
 
             it('zeroPrivateKey', () => {
