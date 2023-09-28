@@ -3,15 +3,27 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { DLEQParams, DLEQProof, DLEQProver, Elt, Oprf, Scalar } from '../src/index.js'
+import {
+    type DLEQParams,
+    type Elt,
+    type Scalar,
+    DLEQProof,
+    DLEQProver,
+    Oprf
+} from '../src/index.js'
 import { describeGroupTests } from './describeGroupTests.js'
 import { serdeClass } from './util.js'
 
 describeGroupTests((g) => {
     describe.each(g.supportedGroups)('DLEQ', (id) => {
         const groupName = id
-        const gg = Oprf.Group.fromID(id)
-        const params: DLEQParams = { gg, hash: 'SHA-256', dst: 'domain-sep' }
+        const gg = Oprf.Crypto.Group.fromID(id)
+        const params: DLEQParams = {
+            gg,
+            hash: Oprf.Crypto.hash,
+            hashID: 'SHA-256',
+            dst: 'domain-sep'
+        }
         const Peggy = new DLEQProver(params)
 
         let k: Scalar
