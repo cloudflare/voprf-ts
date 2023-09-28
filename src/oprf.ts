@@ -112,13 +112,13 @@ export abstract class Oprf {
     readonly mode: ModeID
     readonly ID: SuiteID
     readonly gg: Group
-    readonly hash: HashID
+    readonly hashID: HashID
 
     constructor(mode: ModeID, suite: SuiteID) {
         const [ID, gid, hash] = getOprfParams(suite)
         this.ID = ID
         this.gg = Oprf.Group.fromID(gid)
-        this.hash = hash
+        this.hashID = hash
         this.mode = Oprf.validateMode(mode)
     }
 
@@ -142,7 +142,7 @@ export abstract class Oprf {
             ...toU16LenPrefix(issuedElement),
             new TextEncoder().encode(Oprf.LABELS.FinalizeDST)
         ])
-        return await Oprf.Crypto.hash(this.hash, hashInput)
+        return await Oprf.Crypto.hash(this.hashID, hashInput)
     }
 
     protected scalarFromInfo(info: Uint8Array): Promise<Scalar> {
