@@ -14,7 +14,7 @@ export interface MakeEdParamsParams {
     scalarHash: ScalarHash
     element: ElementSpec
     hashID: HashID
-    hash?: CHash
+    hash: CHash
 }
 
 export function makeEdParams({
@@ -29,8 +29,6 @@ export function makeEdParams({
     const scalarField = Field(curve.CURVE.n, undefined, true)
     // Ditto
     const elementField = Field(curve.CURVE.p)
-
-    const hashUsed = hash ?? (curve.CURVE.hash as CHash)
     return {
         isEdwards: true,
 
@@ -41,17 +39,17 @@ export function makeEdParams({
         },
 
         element: {
+            ...element,
             size: {
                 compressed: elementField.BYTES,
                 standard: elementField.BYTES
-            },
-            ...element
+            }
         },
 
         hash: {
             id: hashID,
-            size: hashUsed.outputLen,
-            fn: hashUsed
+            size: hash.outputLen,
+            fn: hash
         }
     }
 }

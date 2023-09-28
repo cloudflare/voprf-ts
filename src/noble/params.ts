@@ -16,6 +16,7 @@ import { GroupParams } from './types.js'
 import { makeShortParams } from './short.js'
 import { makeEdParams } from './edwards.js'
 import { shake256_512 } from './hashes.js'
+import { sha512 } from '@noble/hashes/sha512'
 
 const GROUPS: Record<GroupID, GroupParams> = {
     [Groups.P256]: makeShortParams({
@@ -44,7 +45,8 @@ const GROUPS: Record<GroupID, GroupParams> = {
         element: {
             hash: hashToRistretto255,
             Point: ed25519.RistrettoPoint
-        }
+        },
+        hash: sha512
     }),
     [Groups.DECAF448]: makeEdParams({
         curve: ed448.ed448,
