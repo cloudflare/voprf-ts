@@ -74,7 +74,7 @@ export class EltNb implements Elt {
     }
 
     serialize(compressed = true): Uint8Array {
-        if (this.isIdentity() && !this.g.params.isEdwards) {
+        if (!this.g.params.isEdwards && this.isIdentity()) {
             return Uint8Array.from([0])
         }
         return this.p.toRawBytes(compressed)

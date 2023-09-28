@@ -5,21 +5,21 @@
 
 import { sha256 } from '@noble/hashes/sha256'
 import { sha384, sha512 } from '@noble/hashes/sha512'
-import { CHash, wrapConstructor } from '@noble/hashes/utils'
-import { shake256 } from '@noble/hashes/sha3'
+import { CHash, Hash, wrapConstructor } from '@noble/hashes/utils'
+import { Keccak, shake256 } from '@noble/hashes/sha3'
 import { HashID } from '../cryptoTypes.js'
 
-export const shake256_512 = wrapConstructor(() => shake256.create({ dkLen: 64 }))
+export const shake256_512 = wrapConstructor<Hash<Keccak>>(() => shake256.create({ dkLen: 64 }))
 
 const HASHES: Record<HashID, CHash> = {
     'SHA-256': sha256,
     'SHA-384': sha384,
     'SHA-512': sha512,
-    'SHAKE256': shake256_512
+    SHAKE256: shake256_512
 }
 
 export function hashSync(hashID: HashID, input: Uint8Array) {
-    const fn = Reflect.get(HASHES, hashID)
+    const fn = HASHES[`${hashID}`]
     if (!fn) throw new Error(`Unknown hashID=${hashID}`)
     return fn(input)
 }
