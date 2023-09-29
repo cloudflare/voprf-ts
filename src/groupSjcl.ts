@@ -178,7 +178,8 @@ interface InnerScalar {
 }
 
 interface SSWUParams {
-    // See Section F.2.1.2 at https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#appendix-F.2.1.2
+    // See Appendix F.2.1.2 of RFC-9380
+    // https://datatracker.ietf.org/doc/html/rfc9380#appendix-F.2.1.2
     Z: sjcl.bn
     c1: sjcl.bn // 1. c1 = (p-3)/4
     c2: sjcl.bn // 2. c2 = sqrt(-Z) in GF(p).
@@ -395,8 +396,8 @@ class EltSj implements Elt {
 
     private static sswu(g: GroupSj, u: sjcl.bn): EltSj {
         // Simplified SWU method.
-        // Appendix F.2 of draft-irtf-cfrg-hash-to-curve-14
-        // https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#appendix-F.2
+        // Appendix F.2 of RFC-9380
+        // https://datatracker.ietf.org/doc/html/rfc9380#appendix-F.2
         const curve = getCurve(g.id)
         const { a: A, b: B } = curve
         const { Z, c1, c2 } = getSSWUParams(g.id)
