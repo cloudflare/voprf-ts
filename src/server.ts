@@ -3,9 +3,9 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { DLEQParams, DLEQProver } from './dleq.js'
-import { Elt, Scalar } from './groupTypes.js'
-import { Evaluation, EvaluationRequest, ModeID, Oprf, SuiteID } from './oprf.js'
+import { type DLEQParams, DLEQProver } from './dleq.js'
+import type { Elt, Scalar } from './groupTypes.js'
+import { Evaluation, EvaluationRequest, type ModeID, Oprf, type SuiteID } from './oprf.js'
 import { ctEqual, zip } from './util.js'
 
 class baseServer extends Oprf {

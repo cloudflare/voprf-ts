@@ -5,8 +5,8 @@
 
 import { bytesToNumberBE, bytesToNumberLE } from '@noble/curves/abstract/utils'
 
-import { Deserializer, Group, GroupID, Groups } from '../groupTypes.js'
-import { GroupParams } from './types.js'
+import { type Deserializer,type  Group,type  GroupID, Groups } from '../groupTypes.js'
+import type { GroupParams } from './types.js'
 import { ScalarNb } from './scalar.js'
 import { EltNb } from './element.js'
 import { getParams } from './params.js'

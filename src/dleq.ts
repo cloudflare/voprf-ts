@@ -4,9 +4,9 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 //
 // Implementation of batched discrete log equivalents proofs (DLEQ) as
-// described in https://www.ietf.org/id/draft-irtf-cfrg-voprf-09.html#name-discrete-log-equivalence-pr.
-import { HashID } from './cryptoTypes.js'
-import { Elt, Group, Scalar } from './groupTypes.js'
+// described in https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-21#name-discrete-logarithm-equivale
+import type { HashID } from './cryptoTypes.js'
+import type { Elt, Group, Scalar } from './groupTypes.js'
 import { checkSize, joinAll, to16bits, toU16LenPrefix } from './util.js'
 
 export interface DLEQParams {
@@ -24,7 +24,7 @@ const LABELS = {
 } as const
 
 // computeComposites implements ComputeComposites and ComputeCompositiesFast
-// functions from https://www.ietf.org/id/draft-irtf-cfrg-voprf-09.html#name-discrete-log-equivalence-pr.
+// functions from https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-21#name-discrete-logarithm-equivale
 async function computeComposites(
     params: DLEQParams,
     b: Elt,
@@ -70,7 +70,7 @@ async function computeComposites(
 
 // challenge implements the shared subprocedure for generating a challenge
 // used by the GenerateProof and VerifyProof functions
-// from https://www.ietf.org/id/draft-irtf-cfrg-voprf-09.html#name-discrete-log-equivalence-pr
+// from https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-21#name-discrete-logarithm-equivale
 // to generate a challenge from the input elements. The point arguments
 // correspond to [B, M, Z, t2, t3] from the specification.
 function challenge(params: DLEQParams, points: [Elt, Elt, Elt, Elt, Elt]): Promise<Scalar> {
@@ -97,7 +97,7 @@ export class DLEQProof {
     }
 
     // verify_batch implements the VerifyProof function
-    // from https://www.ietf.org/id/draft-irtf-cfrg-voprf-09.html#name-discrete-log-equivalence-pr.
+    // from https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-21#name-discrete-logarithm-equivale
     // The argument p0 corresponds to the elements A, B, and the argument p1s
     // corresponds to the arrays of elements C and D from the specification.
     async verify_batch(p0: [Elt, Elt], p1s: Array<[Elt, Elt]>): Promise<boolean> {
@@ -144,7 +144,7 @@ export class DLEQProver {
     }
 
     // prove_batch implements the GenerateProof function
-    // from https://www.ietf.org/id/draft-irtf-cfrg-voprf-09.html#name-discrete-log-equivalence-pr.
+    // from https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-21#name-discrete-logarithm-equivale
     // The argument p0 corresponds to the elements A, B, and the argument p1s
     // corresponds to the arrays of elements C and D from the specification.
     async prove_batch(

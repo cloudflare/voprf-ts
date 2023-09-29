@@ -4,10 +4,10 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import { Field } from '@noble/curves/abstract/modular'
-import { CHash } from '@noble/hashes/utils'
-import { CurveFn } from '@noble/curves/abstract/edwards'
-import { ElementSpec, GroupParams, ScalarHash } from './types.js'
-import { HashID } from '../cryptoTypes.js'
+import type { CHash } from '@noble/hashes/utils'
+import type { CurveFn } from '@noble/curves/abstract/edwards'
+import type { ElementSpec, GroupParams, ScalarHash } from './types.js'
+import type { HashID } from '../cryptoTypes.js'
 
 export interface MakeEdParamsParams {
     curve: CurveFn
