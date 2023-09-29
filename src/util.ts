@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Deserializer, Group, GroupID } from './groupTypes.js'
+import type { Deserializer, Group, GroupID } from './groupTypes.js'
 
 export function joinAll(a: Uint8Array[]): Uint8Array {
     let size = 0

@@ -7,14 +7,14 @@ import { checkSize, compat, errDeserialization, joinAll, xor } from './util.js'
 
 import sjcl from './sjcl/index.js'
 import {
-    Deserializer,
-    Elt,
-    errBadGroup,
-    Group,
-    GroupCons,
-    GroupID,
+    type Deserializer,
+    type Elt,
+    type Group,
+    type GroupCons,
+    type GroupID,
+    type Scalar,
     Groups,
-    Scalar
+    errBadGroup
 } from './groupTypes.js'
 
 function hashParams(hash: string): {

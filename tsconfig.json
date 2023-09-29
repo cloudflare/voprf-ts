@@ -17,6 +17,7 @@
         "noImplicitReturns": true,
         "noFallthroughCasesInSwitch": true,
         "moduleResolution": "node",
+        "verbatimModuleSyntax": true,
         "esModuleInterop": true,
         "rootDir": ".",
         "outDir": "./lib/esm"

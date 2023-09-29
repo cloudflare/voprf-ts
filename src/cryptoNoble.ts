@@ -4,7 +4,7 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import { GroupNb } from './noble/group.js'
-import { CryptoProvider, HashID } from './cryptoTypes.js'
+import type { CryptoProvider, HashID } from './cryptoTypes.js'
 import { hashSync } from './noble/hashes.js'
 
 export const CryptoNoble: CryptoProvider = {

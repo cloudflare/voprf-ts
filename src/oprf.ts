@@ -3,8 +3,15 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { DLEQParams, DLEQProof } from './dleq.js'
-import { Elt, Group, GroupCons, GroupID, Groups, Scalar } from './groupTypes.js'
+import { type DLEQParams, DLEQProof } from './dleq.js'
+import {
+    Groups,
+    type Elt,
+    type Group,
+    type GroupCons,
+    type GroupID,
+    type Scalar
+} from './groupTypes.js'
 
 import {
     fromU16LenPrefixDes,
@@ -14,7 +21,7 @@ import {
     toU16LenPrefixClass,
     toU16LenPrefixUint8Array
 } from './util.js'
-import { CryptoProvider, HashID } from './cryptoTypes.js'
+import type { CryptoProvider, HashID } from './cryptoTypes.js'
 import { CryptoSjcl } from './cryptoSjcl.js'
 
 export type ModeID = (typeof Oprf.Mode)[keyof typeof Oprf.Mode]

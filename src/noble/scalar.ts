@@ -9,10 +9,10 @@ import {
     hash_to_field
 } from '@noble/curves/abstract/hash-to-curve'
 
-import { Scalar } from '../groupTypes.js'
+import type { Scalar } from '../groupTypes.js'
 import { checkSize, compat, errDeserialization } from '../util.js'
 
-import { PrimeField } from './types.js'
+import type { PrimeField } from './types.js'
 
 import type { GroupNb } from './group.js'
 

@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { CryptoProvider, HashID } from './cryptoTypes.js'
+import type { CryptoProvider, HashID } from './cryptoTypes.js'
 import { GroupConsSjcl } from './groupSjcl.js'
 
 export const CryptoSjcl: CryptoProvider = {

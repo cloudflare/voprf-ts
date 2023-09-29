@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { GroupCons } from './groupTypes.js'
+import type { GroupCons } from './groupTypes.js'
 
 export type HashID = 'SHA-512' | 'SHA-256' | 'SHA-384' | 'SHAKE256'
 

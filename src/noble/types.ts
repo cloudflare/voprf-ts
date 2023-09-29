@@ -4,13 +4,13 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import { Field } from '@noble/curves/abstract/modular'
-import { CHash } from '@noble/hashes/utils'
+import type { CHash } from '@noble/hashes/utils'
 import * as p256 from '@noble/curves/p256'
 import * as ed25519 from '@noble/curves/ed25519'
 import * as ed448 from '@noble/curves/ed448'
-import { Hex } from '@noble/curves/abstract/utils'
+import type { Hex } from '@noble/curves/abstract/utils'
 
-import { HashID } from '../cryptoTypes.js'
+import type { HashID } from '../cryptoTypes.js'
 
 export type PrimeField = ReturnType<typeof Field>
 

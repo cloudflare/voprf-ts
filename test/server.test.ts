@@ -7,7 +7,7 @@ import { jest } from '@jest/globals'
 
 import {
     getSupportedSuites,
-    GroupID,
+    type GroupID,
     Oprf,
     OPRFClient,
     OPRFServer,

@@ -3,10 +3,10 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { CurveFn } from '@noble/curves/abstract/weierstrass'
 import { Field } from '@noble/curves/abstract/modular'
-import { GroupParams, HashToPointFunc, PointConstructor } from './types.js'
-import { HashID } from '../cryptoTypes.js'
+import type { CurveFn } from '@noble/curves/abstract/weierstrass'
+import type { GroupParams, HashToPointFunc, PointConstructor } from './types.js'
+import type { HashID } from '../cryptoTypes.js'
 
 export interface MakeShortParamsArgs {
     curve: CurveFn

@@ -7,13 +7,13 @@ import {
     derivePrivateKey,
     generatePublicKey,
     getSupportedSuites,
-    ModeID,
+    type ModeID,
     Oprf,
     OPRFClient,
     OPRFServer,
     POPRFClient,
     POPRFServer,
-    SuiteID,
+    type SuiteID,
     VOPRFClient,
     VOPRFServer
 } from '../src/index.js'

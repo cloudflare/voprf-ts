@@ -3,9 +3,9 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { ModeID, Oprf, SuiteID } from './oprf.js'
+import { type ModeID, type SuiteID, Oprf } from './oprf.js'
 import { joinAll, toU16LenPrefix } from './util.js'
-import { Scalar } from './groupTypes.js'
+import { type Scalar } from './groupTypes.js'
 
 export function getKeySizes(id: SuiteID): { Nsk: number; Npk: number } {
     const gg = Oprf.getGroup(id)

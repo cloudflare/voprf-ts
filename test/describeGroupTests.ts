@@ -1,5 +1,5 @@
 import { CryptoNoble } from '../src/cryptoNoble.js'
-import { GroupCons, Oprf } from '../src/index.js'
+import { type GroupCons, Oprf } from '../src/index.js'
 import { CryptoSjcl } from '../src/cryptoSjcl.js'
 
 const groupConsMatch = process.env.GROUP_CONS

@@ -3,10 +3,10 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { ProjPointType } from '@noble/curves/abstract/weierstrass'
-import { Elt } from '../groupTypes.js'
+import type { ProjPointType } from '@noble/curves/abstract/weierstrass'
+import type { Elt } from '../groupTypes.js'
 import { ScalarNb } from './scalar.js'
-import { Point, PointConstructor } from './types.js'
+import type { Point, PointConstructor } from './types.js'
 import type { GroupNb } from './group.js'
 import { compat, errDeserialization } from '../util.js'
 
