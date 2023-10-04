@@ -74,6 +74,47 @@ Finally, the client can produce the output[s] of the OPRF protocol using the ser
 const [output] = await client.finalize(finData, evaluation);
 ```
 
+### Support for @noble Crypto backend (faster & ristretto/decaf)
+
+With this library, you have the flexibility to switch out the cryptographic
+backend to`@cloudflare/voprf-ts/crypto-noble`. It has much better performance
+and provides support for Ristretto and Decaf groups:
+
+```js
+Oprf.Suite.RISTRETTO255_SHA512
+Oprf.Suite.DECAF448_SHAKE256
+```
+
+Before doing so, be aware of the following:
+
+- The `@noble/curves` library uses native JavaScript `BigInt` for arithmetic
+  operations, which are non-constant time by nature. More importantly, the
+  noble libraries use constant time(CT) algorithms.
+
+- Before utilizing the `CryptoNoble` backend, you need to install a couple of
+  optional dependencies: `@noble/curves` and `@noble/hashes`.
+
+You can install dependencies via:
+
+```bash
+npm install @noble/curves @noble/hashes
+```
+
+Once installed, here's how to use:
+
+```javascript
+import { Oprf } from '@cloudflare/voprf-ts';
+import { CryptoNoble } from '@cloudflare/voprf-ts/crypto-noble';
+
+// Override the default Oprf.Crypto with CryptoNoble 
+Oprf.Crypto = CryptoNoble; // Aware of BigInt implications for your use case
+
+console.log(Oprf.Crypto.Group.supportedGroups);
+// Expected output: [ 'ristretto255', 'decaf448', 'P-256', 'P-384', 'P-521' ]
+
+// Use the library as normal
+```
+
 ### Development
 
 | Task            | NPM scripts          |
