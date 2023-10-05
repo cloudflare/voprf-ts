@@ -74,45 +74,46 @@ Finally, the client can produce the output[s] of the OPRF protocol using the ser
 const [output] = await client.finalize(finData, evaluation);
 ```
 
-### Support for @noble Crypto backend (faster & ristretto/decaf)
+### Integrating the @noble Crypto Backend for Enhanced Performance and Support
 
-With this library, you have the flexibility to switch out the cryptographic
-backend to`@cloudflare/voprf-ts/crypto-noble`. It has much better performance
-and provides support for Ristretto and Decaf groups:
+This library exposes the `@cloudflare/voprf-ts/crypto-noble` cryptographic backend. The advantages include:
 
-```js
-Oprf.Suite.RISTRETTO255_SHA512
-Oprf.Suite.DECAF448_SHAKE256
-```
+- Improved performance benchmarks.
+- Extended support for the Ristretto and Decaf elliptic curve groups:
+  ```js
+  Oprf.Suite.RISTRETTO255_SHA512
+  Oprf.Suite.DECAF448_SHAKE256
+  ```
 
-Before doing so, be aware of the following:
+However, users should note the following:
 
-- The `@noble/curves` library uses native JavaScript `BigInt` for arithmetic
-  operations, which are non-constant time by nature. More importantly, the
-  noble libraries use constant time(CT) algorithms.
+- Arithmetic operations in the `@noble/curves` library leverage native JavaScript's `BigInt`. 
+  - These operations inherently operate in non-constant time. 
+  - However, noble libraries DO take care to employ constant time (CT) algorithms.
+  - In the interest of fairness, it must be noted that `sjcl` is also not perfectly CT either. 
+  - As always, **users are encouraged to understand the implications of their chosen cryptographic backend** fully. 
 
-- Before utilizing the `CryptoNoble` backend, you need to install a couple of
-  optional dependencies: `@noble/curves` and `@noble/hashes`.
+- To incorporate the `CryptoNoble` backend, it is necessary to first install some optional dependencies: `@noble/curves` and `@noble/hashes`.
 
-You can install dependencies via:
+Dependencies can be installed with the following command:
 
 ```bash
 npm install @noble/curves @noble/hashes
 ```
 
-Once installed, here's how to use:
+Upon successful installation, the backend can be utilized as illustrated below:
 
 ```javascript
 import { Oprf } from '@cloudflare/voprf-ts';
 import { CryptoNoble } from '@cloudflare/voprf-ts/crypto-noble';
 
-// Override the default Oprf.Crypto with CryptoNoble 
-Oprf.Crypto = CryptoNoble; // Aware of BigInt implications for your use case
+// Set Oprf.Crypto to use CryptoNoble. Ensure you understand the BigInt nuances related to your specific use case.
+Oprf.Crypto = CryptoNoble;
 
 console.log(Oprf.Crypto.Group.supportedGroups);
 // Expected output: [ 'ristretto255', 'decaf448', 'P-256', 'P-384', 'P-521' ]
 
-// Use the library as normal
+// Proceed with the library usage as intended.
 ```
 
 ### Development
