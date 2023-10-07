@@ -25,7 +25,7 @@ async function bench(provider: CryptoProvider) {
 
     return new Promise<unknown>((resolve, reject) => {
         bs.on('cycle', (ev: Benchmark.Event) => {
-            console.log(provider.name, String(ev.target))
+            console.log(`${provider.name}/${String(ev.target)}`)
         })
         bs.on('error', (event: Benchmark.Event) => {
             bs.abort()
@@ -39,9 +39,7 @@ async function bench(provider: CryptoProvider) {
 
 async function runBenchmarksSerially() {
     try {
-        console.log('Benchmarking CryptoNoble:')
         await bench(CryptoNoble)
-        console.log('Benchmarking CryptoSjcl:')
         await bench(CryptoSjcl)
     } catch (_e) {
         const e = _e as Error
