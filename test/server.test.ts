@@ -8,7 +8,7 @@ import { jest } from '@jest/globals'
 import {
     getSupportedSuites,
     type GroupID,
-    Crypto,
+    CryptoImpl,
     OPRFClient,
     OPRFServer,
     randomPrivateKey
@@ -41,7 +41,7 @@ function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
     const [algorithm, key, data] = x
     if (algorithm === 'OPRF') {
         const algorithmName = (key.algorithm as EcdsaParams).name
-        const g = Crypto.Group.fromID(algorithmName as GroupID)
+        const g = CryptoImpl.Group.fromID(algorithmName as GroupID)
         const P = g.desElt(new Uint8Array(data as ArrayBuffer))
         const serSk = new Uint8Array((key as CryptoKeyWithBuffer).keyData)
         const sk = g.desScalar(serSk)

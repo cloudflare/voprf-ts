@@ -74,7 +74,7 @@ Finally, the client can produce the output[s] of the OPRF protocol using the ser
 const [output] = await client.finalize(finData, evaluation);
 ```
 
-### Integrating the @noble Crypto Provider for Enhanced Performance and Support
+### Integrating the @noble CryptoProvider for Enhanced Performance and Support
 
 This library exposes the `@cloudflare/voprf-ts/crypto-noble` cryptographic provider. The advantages include:
 
@@ -105,13 +105,13 @@ npm install @noble/curves @noble/hashes
 Upon successful installation, the provider can be utilized as illustrated below:
 
 ```javascript
-import { Crypto } from '@cloudflare/voprf-ts';
+import { CryptoImpl } from '@cloudflare/voprf-ts';
 import { CryptoNoble } from '@cloudflare/voprf-ts/crypto-noble';
 
 // Ensure you understand the BigInt nuances related to your specific use case!
-Crypto.provider = CryptoNoble;
+CryptoImpl.provider = CryptoNoble;
 
-console.log(Crypto.Group.supportedGroups);
+console.log(CryptoImpl.Group.supportedGroups);
 // Expected output: [ 'ristretto255', 'decaf448', 'P-256', 'P-384', 'P-521' ]
 
 // Proceed with the library usage as intended.

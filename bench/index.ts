@@ -10,14 +10,14 @@ import { benchGroup } from './group.bench.js'
 import { benchOPRF } from './oprf.bench.js'
 import { getCryptoProviders } from './testProviders.js'
 
-import { Crypto, type CryptoProvider } from '../src/index.js'
+import { CryptoImpl, type CryptoProvider } from '../src/index.js'
 
 if (typeof crypto === 'undefined') {
     Object.assign(global, { crypto: webcrypto })
 }
 
 async function bench(provider: CryptoProvider) {
-    Crypto.provider = provider
+    CryptoImpl.provider = provider
 
     const bs = new Benchmark.Suite()
     await benchOPRF(bs)

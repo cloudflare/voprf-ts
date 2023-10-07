@@ -7,7 +7,7 @@ import {
     OPRFClient,
     OPRFServer,
     Oprf,
-    Crypto,
+    CryptoImpl,
     POPRFClient,
     POPRFServer,
     VOPRFClient,
@@ -34,7 +34,7 @@ export async function benchOPRF(bs: Benchmark.Suite) {
     const input = te.encode('This is the client input')
 
     for (const [mode, m] of Object.entries(Oprf.Mode)) {
-        for (const id of getSupportedSuites(Crypto.Group)) {
+        for (const id of getSupportedSuites(CryptoImpl.Group)) {
             const privateKey = await randomPrivateKey(id)
             const publicKey = generatePublicKey(id, privateKey)
             let server: OPRFServer | VOPRFServer | POPRFServer

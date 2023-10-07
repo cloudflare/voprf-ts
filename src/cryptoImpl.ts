@@ -4,28 +4,28 @@ import { CryptoSjcl } from './cryptoSjcl.js'
 export const DEFAULT_CRYPTO_PROVIDER = CryptoSjcl
 
 /**
- * The `CryptoImpl` class serves as an intermediary for utilizing a cryptographic provider.
+ * The `CryptoProviderIntermediary` class serves as an intermediary for utilizing a cryptographic provider.
  * It implements the `CryptoProvider` interface, encapsulating a `CryptoProvider` instance
  * which can be overridden via the `provider` field. This design allows for flexible
  * substitution of cryptographic providers while ensuring adherence to the `CryptoProvider`
  * interface contract.
  *
- * The `Crypto` object, instantiated from `CryptoImpl` with a default provider, acts as the
+ * The `Crypto` object, instantiated from `CryptoProviderIntermediary` with a default provider, acts as the
  * accessible point for cryptographic operations within the library. Users can override the
  * default cryptographic provider by setting a different provider to the `Crypto.provider` field.
  *
  * Usage:
  * ```javascript
- * import { Crypto } from '@cloudflare/voprf-ts';
+ * import { CryptoImpl } from '@cloudflare/voprf-ts';
  * import { YourCryptoProvider } from './your-crypto-provider-file.js';
  *
  * // Override the default crypto provider
- * Crypto.provider = YourCryptoProvider;
+ * CryptoImpl.provider = YourCryptoProvider;
  *
  * // Now Crypto will use YourCryptoProvider for cryptographic operations
  * ```
  */
-class CryptoImpl implements CryptoProvider {
+class CryptoProviderIntermediary implements CryptoProvider {
     constructor(public provider: CryptoProvider) {}
 
     get Group() {
@@ -41,4 +41,5 @@ class CryptoImpl implements CryptoProvider {
     }
 }
 
-export const Crypto = new CryptoImpl(DEFAULT_CRYPTO_PROVIDER)
+// Because Crypto is already a global, we name this CryptoImpl
+export const CryptoImpl = new CryptoProviderIntermediary(DEFAULT_CRYPTO_PROVIDER)

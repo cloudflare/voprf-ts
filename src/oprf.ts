@@ -22,7 +22,7 @@ import {
     toU16LenPrefixUint8Array
 } from './util.js'
 import type { HashID } from './cryptoTypes.js'
-import { Crypto } from './crypto.js'
+import { CryptoImpl } from './cryptoImpl.js'
 
 export type ModeID = (typeof Oprf.Mode)[keyof typeof Oprf.Mode]
 export type SuiteID = (typeof Oprf.Suite)[keyof typeof Oprf.Suite]
@@ -89,7 +89,7 @@ export abstract class Oprf {
     }
 
     static getGroup(suite: SuiteID): Group {
-        return Crypto.Group.fromID(getOprfParams(suite)[1])
+        return CryptoImpl.Group.fromID(getOprfParams(suite)[1])
     }
 
     static getHash(suite: SuiteID): HashID {
@@ -118,7 +118,7 @@ export abstract class Oprf {
     constructor(mode: ModeID, suite: SuiteID) {
         const [ID, gid, hash] = getOprfParams(suite)
         this.ID = ID
-        this.gg = Crypto.Group.fromID(gid)
+        this.gg = CryptoImpl.Group.fromID(gid)
         this.hashID = hash
         this.mode = Oprf.validateMode(mode)
     }
@@ -143,7 +143,7 @@ export abstract class Oprf {
             ...toU16LenPrefix(issuedElement),
             new TextEncoder().encode(Oprf.LABELS.FinalizeDST)
         ])
-        return await Crypto.hash(this.hashID, hashInput)
+        return await CryptoImpl.hash(this.hashID, hashInput)
     }
 
     protected scalarFromInfo(info: Uint8Array): Promise<Scalar> {

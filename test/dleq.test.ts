@@ -7,7 +7,7 @@ import {
     type DLEQParams,
     type Elt,
     type Scalar,
-    Crypto,
+    CryptoImpl,
     DLEQProof,
     DLEQProver
 } from '../src/index.js'
@@ -17,7 +17,7 @@ import { serdeClass } from './util.js'
 describeCryptoTests((g) => {
     describe.each(g.supportedGroups)('DLEQ', (id) => {
         const groupName = id
-        const gg = Crypto.Group.fromID(id)
+        const gg = CryptoImpl.Group.fromID(id)
         const params: DLEQParams = {
             gg,
             hashID: 'SHA-256',
