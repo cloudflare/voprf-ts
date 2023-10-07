@@ -19,22 +19,21 @@ if (typeof crypto === 'undefined') {
 async function bench(provider: CryptoProvider) {
     Crypto.provider = provider
 
-    const bs = new Benchmark.Suite(provider.name)
+    const bs = new Benchmark.Suite()
     await benchOPRF(bs)
     await benchGroup(bs)
 
-    bs.on('cycle', (ev: Benchmark.Event) => {
-        console.log(provider.name, String(ev.target))
-    })
-
-    bs.run({ async: false })
-
     return new Promise<unknown>((resolve, reject) => {
+        bs.on('cycle', (ev: Benchmark.Event) => {
+            console.log(provider.name, String(ev.target))
+        })
         bs.on('error', (event: Benchmark.Event) => {
             bs.abort()
             reject(new Error(`error: ${String(event.target)}`))
         })
         bs.on('complete', resolve)
+
+        bs.run({ async: false })
     })
 }
 
