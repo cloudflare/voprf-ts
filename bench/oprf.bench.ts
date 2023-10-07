@@ -7,12 +7,14 @@ import {
     OPRFClient,
     OPRFServer,
     Oprf,
+    Crypto,
     POPRFClient,
     POPRFServer,
     VOPRFClient,
     VOPRFServer,
     generatePublicKey,
-    randomPrivateKey
+    randomPrivateKey,
+    getSupportedSuites
 } from '../src/index.js'
 
 import Benchmark from 'benchmark'
@@ -32,7 +34,7 @@ export async function benchOPRF(bs: Benchmark.Suite) {
     const input = te.encode('This is the client input')
 
     for (const [mode, m] of Object.entries(Oprf.Mode)) {
-        for (const [suite, id] of Object.entries(Oprf.Suite)) {
+        for (const id of getSupportedSuites(Crypto.Group)) {
             const privateKey = await randomPrivateKey(id)
             const publicKey = generatePublicKey(id, privateKey)
             let server: OPRFServer | VOPRFServer | POPRFServer
@@ -56,7 +58,7 @@ export async function benchOPRF(bs: Benchmark.Suite) {
 
             const [finData, evalReq] = await client.blind([input])
             const evaluatedElement = await server.blindEvaluate(evalReq)
-            const prefix = mode + '/' + suite + '/'
+            const prefix = mode + '/' + id + '/'
 
             bs.add(
                 prefix + 'blind    ',

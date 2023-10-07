@@ -16,8 +16,8 @@ export const DEFAULT_CRYPTO_PROVIDER = CryptoSjcl
  *
  * Usage:
  * ```javascript
- * import { Crypto } from './path-to-this-file';
- * import { YourCryptoProvider } from './your-crypto-provider-file';
+ * import { Crypto } from '@cloudflare/voprf-ts';
+ * import { YourCryptoProvider } from './your-crypto-provider-file.js';
  *
  * // Override the default crypto provider
  * Crypto.provider = YourCryptoProvider;

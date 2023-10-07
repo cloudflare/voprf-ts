@@ -6,27 +6,50 @@
 import Benchmark from 'benchmark'
 import { benchGroup } from './group.bench.js'
 import { benchOPRF } from './oprf.bench.js'
+import { Crypto, type CryptoProvider } from '../src/index.js'
+
 import { webcrypto } from 'node:crypto'
+import { CryptoSjcl } from '../src/cryptoSjcl.js'
+import { CryptoNoble } from '../src/cryptoNoble.js'
 
 if (typeof crypto === 'undefined') {
-    global.crypto = webcrypto as unknown as Crypto
+    Object.assign(global, { crypto: webcrypto })
 }
 
-async function bench() {
-    const bs = new Benchmark.Suite()
+async function bench(provider: CryptoProvider) {
+    Crypto.provider = provider
 
+    const bs = new Benchmark.Suite(provider.name)
     await benchOPRF(bs)
     await benchGroup(bs)
 
     bs.on('cycle', (ev: Benchmark.Event) => {
-        console.log(String(ev.target))
+        console.log(provider.name, String(ev.target))
     })
 
     bs.run({ async: false })
+
+    return new Promise<unknown>((resolve, reject) => {
+        bs.on('error', (event: Benchmark.Event) => {
+            bs.abort()
+            reject(new Error(`error: ${String(event.target)}`))
+        })
+        bs.on('complete', resolve)
+    })
 }
 
-bench().catch((e: Error) => {
-    console.log(`Error: ${e.message}`)
-    console.log(`Stack: ${e.stack}`)
-    process.exit(1)
-})
+async function runBenchmarksSerially() {
+    try {
+        console.log('Benchmarking CryptoNoble:')
+        await bench(CryptoNoble)
+        console.log('Benchmarking CryptoSjcl:')
+        await bench(CryptoSjcl)
+    } catch (_e) {
+        const e = _e as Error
+        console.log(`Error: ${e.message}`)
+        console.log(`Stack: ${e.stack}`)
+        process.exit(1)
+    }
+}
+
+void runBenchmarksSerially()
