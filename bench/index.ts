@@ -4,13 +4,13 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import Benchmark from 'benchmark'
+import { webcrypto } from 'node:crypto'
+
 import { benchGroup } from './group.bench.js'
 import { benchOPRF } from './oprf.bench.js'
-import { Crypto, type CryptoProvider } from '../src/index.js'
+import { getCryptoProviders } from './testProviders.js'
 
-import { webcrypto } from 'node:crypto'
-import { CryptoSjcl } from '../src/cryptoSjcl.js'
-import { CryptoNoble } from '../src/cryptoNoble.js'
+import { Crypto, type CryptoProvider } from '../src/index.js'
 
 if (typeof crypto === 'undefined') {
     Object.assign(global, { crypto: webcrypto })
@@ -39,8 +39,9 @@ async function bench(provider: CryptoProvider) {
 
 async function runBenchmarksSerially() {
     try {
-        await bench(CryptoNoble)
-        await bench(CryptoSjcl)
+        for (const provider of getCryptoProviders()) {
+            await bench(provider)
+        }
     } catch (_e) {
         const e = _e as Error
         console.log(`Error: ${e.message}`)
