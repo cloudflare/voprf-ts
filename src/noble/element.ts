@@ -6,10 +6,7 @@
 import type { ProjPointType } from '@noble/curves/abstract/weierstrass'
 import type { Elt } from '../groupTypes.js'
 import type { Point, PointConstructor } from './types.js'
-// Avoid circular dependency by using import type
 import type { GroupNb } from './group.js'
-// We only care about the type (and unfortunately
-// can't just use Scalar from groupTypes.js)
 import type { ScalarNb } from './scalar.js'
 
 import { compat, errDeserialization } from '../util.js'

@@ -8,6 +8,7 @@ import type { GroupCons } from './groupTypes.js'
 export type HashID = 'SHA-512' | 'SHA-256' | 'SHA-384' | 'SHAKE256'
 
 export interface CryptoProvider {
+    name: string
     Group: GroupCons
     hash(hashID: HashID, input: Uint8Array): Promise<Uint8Array>
 }

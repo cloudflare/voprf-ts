@@ -8,6 +8,10 @@ class CryptoImpl implements CryptoProvider {
         return this.provider.Group
     }
 
+    get name() {
+        return this.provider.name
+    }
+
     hash(hashID: HashID, input: Uint8Array): Promise<Uint8Array> {
         return this.provider.hash(hashID, input)
     }
