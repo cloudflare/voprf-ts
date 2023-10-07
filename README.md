@@ -74,9 +74,9 @@ Finally, the client can produce the output[s] of the OPRF protocol using the ser
 const [output] = await client.finalize(finData, evaluation);
 ```
 
-### Integrating the @noble Crypto Backend for Enhanced Performance and Support
+### Integrating the @noble Crypto Provider for Enhanced Performance and Support
 
-This library exposes the `@cloudflare/voprf-ts/crypto-noble` cryptographic backend. The advantages include:
+This library exposes the `@cloudflare/voprf-ts/crypto-noble` cryptographic provider. The advantages include:
 
 - Improved performance benchmarks.
 - Extended support for the Ristretto and Decaf elliptic curve groups:
@@ -91,9 +91,10 @@ However, users should note the following:
   - These operations inherently operate in non-constant time. 
   - However, noble libraries DO take care to employ constant time (CT) algorithms.
   - In the interest of fairness, it must be noted that `sjcl` is also not perfectly CT either. 
-  - As always, **users are encouraged to understand the implications of their chosen cryptographic backend** fully. 
+  - As always, **users are encouraged to understand the implications of their chosen cryptographic provider** fully.
+  - This is a community contribution and Cloudflare is still researching a perfectly CT JavaScript BN implementation
 
-- To incorporate the `CryptoNoble` backend, it is necessary to first install some optional dependencies: `@noble/curves` and `@noble/hashes`.
+- To incorporate the `CryptoNoble` provider, it is necessary to first install some optional dependencies: `@noble/curves` and `@noble/hashes`.
 
 Dependencies can be installed with the following command:
 
@@ -101,7 +102,7 @@ Dependencies can be installed with the following command:
 npm install @noble/curves @noble/hashes
 ```
 
-Upon successful installation, the backend can be utilized as illustrated below:
+Upon successful installation, the provider can be utilized as illustrated below:
 
 ```javascript
 import { Crypto } from '@cloudflare/voprf-ts';
