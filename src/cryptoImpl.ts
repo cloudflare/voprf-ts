@@ -10,9 +10,9 @@ export const DEFAULT_CRYPTO_PROVIDER = CryptoSjcl
  * substitution of cryptographic providers while ensuring adherence to the `CryptoProvider`
  * interface contract.
  *
- * The `Crypto` object, instantiated from `CryptoProviderIntermediary` with a default provider, acts as the
+ * The `CryptoImpl` object, instantiated from `CryptoProviderIntermediary` with a default provider, acts as the
  * accessible point for cryptographic operations within the library. Users can override the
- * default cryptographic provider by setting a different provider to the `Crypto.provider` field.
+ * default cryptographic provider by setting a different provider to the `CryptoImpl.provider` field.
  *
  * Usage:
  * ```javascript
@@ -22,7 +22,7 @@ export const DEFAULT_CRYPTO_PROVIDER = CryptoSjcl
  * // Override the default crypto provider
  * CryptoImpl.provider = YourCryptoProvider;
  *
- * // Now Crypto will use YourCryptoProvider for cryptographic operations
+ * // Now CryptoImpl will use YourCryptoProvider for cryptographic operations
  * ```
  */
 class CryptoProviderIntermediary implements CryptoProvider {
