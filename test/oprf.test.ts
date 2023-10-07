@@ -16,19 +16,20 @@ import {
     POPRFServer,
     randomPrivateKey,
     VOPRFClient,
-    VOPRFServer
+    VOPRFServer,
+    type SuiteID
 } from '../src/index.js'
-import { describeGroupTests } from './describeGroupTests.js'
 
+import { describeGroupTests } from './describeGroupTests.js'
 import { serdeClass } from './util.js'
 
 async function testBadProof(
+    id: SuiteID,
     client: OPRFClient,
-    server: OPRFServer,
     finData: FinalizeData,
     evaluation: Evaluation
 ) {
-    const badEval = Evaluation.deserialize(server.constructDLEQParams(), evaluation.serialize())
+    const badEval = Evaluation.deserialize(id, evaluation.serialize())
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     Object.assign(badEval.proof!, { s: evaluation.proof!.c })
     await expect(client.finalize(finData, badEval)).rejects.toThrow(/proof failed/)
@@ -78,22 +79,22 @@ describeGroupTests((g) => {
                 // Client
                 // output = Finalize(finData, evaluation, info*)
                 //
-                const output = await client.finalize(finData, evaluation)
-                expect(output[0]).toHaveLength(Oprf.getOprfSize(id))
+                const [output] = await client.finalize(finData, evaluation)
+                expect(output).toHaveLength(Oprf.getOprfSize(id))
 
                 if (evaluation.proof) {
-                    await testBadProof(client, server, finData, evaluation)
+                    await testBadProof(id, client, finData, evaluation)
                 }
 
                 const serverOutput = await server.evaluate(input)
-                expect(output[0]).toStrictEqual(serverOutput)
+                expect(output).toStrictEqual(serverOutput)
 
-                const success = await server.verifyFinalize(input, output[0])
+                const success = await server.verifyFinalize(input, output)
                 expect(success).toBe(true)
 
-                expect(serdeClass(FinalizeData, finData, client.gg)).toBe(true)
-                expect(serdeClass(EvaluationRequest, evalReq, client.gg)).toBe(true)
-                expect(serdeClass(Evaluation, evaluation, server.constructDLEQParams())).toBe(true)
+                expect(serdeClass(FinalizeData, finData, id)).toBe(true)
+                expect(serdeClass(EvaluationRequest, evalReq, id)).toBe(true)
+                expect(serdeClass(Evaluation, evaluation, id)).toBe(true)
             })
         })
     })
