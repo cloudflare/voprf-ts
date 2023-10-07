@@ -1,8 +1,9 @@
 import { CryptoNoble } from '../src/cryptoNoble.js'
-import { type GroupCons, Oprf } from '../src/index.js'
+import { type GroupCons } from '../src/index.js'
 import { CryptoSjcl } from '../src/cryptoSjcl.js'
+import { Crypto } from '../src/crypto.js'
 
-const groupConsMatch = process.env.GROUP_CONS
+const groupConsMatch = process.env.CRYPTO_PROVIDER
 
 export const testProviders = (
     [
@@ -13,17 +14,17 @@ export const testProviders = (
     return !groupConsMatch || name === groupConsMatch
 })
 
-export function describeGroupTests(declare: (group: GroupCons) => void) {
-    describe.each(testProviders)(`Group-%s`, (_groupName, provider) => {
+export function describeCryptoTests(declare: (group: GroupCons) => void) {
+    describe.each(testProviders)(`Crypto-%s`, (_groupName, provider) => {
         // Will run before other beforeAll hooks (see vectors.test.ts)
         beforeAll(() => {
-            Oprf.Crypto = provider
+            Crypto.provider = provider
         })
         // Will run before other tests
         beforeEach(() => {
-            Oprf.Crypto = provider
+            Crypto.provider = provider
         })
-        Oprf.Crypto = provider
+        Crypto.provider = provider
         declare(provider.Group)
     })
 }

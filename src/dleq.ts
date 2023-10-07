@@ -8,12 +8,12 @@
 import type { HashID } from './cryptoTypes.js'
 import type { Elt, Group, Scalar } from './groupTypes.js'
 import { checkSize, joinAll, to16bits, toU16LenPrefix } from './util.js'
+import { Crypto } from './crypto.js'
 
 export interface DLEQParams {
     readonly gg: Group
     readonly dst: string
     readonly hashID: HashID
-    hash(hashID: HashID, input: Uint8Array): Promise<Uint8Array>
 }
 
 const LABELS = {
@@ -35,7 +35,7 @@ async function computeComposites(
     const Bm = b.serialize()
     const seedDST = te.encode(LABELS.Seed + params.dst)
     const h1Input = joinAll([...toU16LenPrefix(Bm), ...toU16LenPrefix(seedDST)])
-    const seed = await params.hash(params.hashID, h1Input)
+    const seed = await Crypto.hash(params.hashID, h1Input)
 
     const compositeLabel = te.encode(LABELS.Composite)
     const h2sDST = te.encode(LABELS.HashToScalar + params.dst)
@@ -112,7 +112,7 @@ export class DLEQProof {
         return (
             this.params.dst === p.params.dst &&
             this.params.gg.id === p.params.gg.id &&
-            this.params.hash === p.params.hash &&
+            this.params.hashID === p.params.hashID &&
             this.c.isEqual(p.c) &&
             this.s.isEqual(p.s)
         )

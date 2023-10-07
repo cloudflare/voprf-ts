@@ -18,7 +18,7 @@ import {
     VOPRFClient,
     VOPRFServer
 } from '../src/index.js'
-import { describeGroupTests } from './describeGroupTests.js'
+import { describeCryptoTests } from './describeCryptoTests.js'
 
 import { serdeClass } from './util.js'
 
@@ -34,7 +34,7 @@ async function testBadProof(
     await expect(client.finalize(finData, badEval)).rejects.toThrow(/proof failed/)
 }
 
-describeGroupTests((g) => {
+describeCryptoTests((g) => {
     describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
         describe.each(getSupportedSuites(g))(`${modeName}`, (id) => {
             let server: OPRFServer | VOPRFServer | POPRFServer

@@ -12,9 +12,9 @@ import {
     validatePrivateKey,
     validatePublicKey
 } from '../src/index.js'
-import { describeGroupTests } from './describeGroupTests.js'
+import { describeCryptoTests } from './describeCryptoTests.js'
 
-describeGroupTests((g) => {
+describeCryptoTests((g) => {
     describe.each(getSupportedSuites(g))('oprf-keys', (id) => {
         describe(`${id}`, () => {
             const { Nsk, Npk } = getKeySizes(id)

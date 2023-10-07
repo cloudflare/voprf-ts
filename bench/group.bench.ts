@@ -4,7 +4,7 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import Benchmark from 'benchmark'
-import { Oprf } from '../src/index.js'
+import { Crypto } from '../src/index.js'
 
 function asyncFn(call: CallableFunction) {
     return {
@@ -21,8 +21,8 @@ export async function benchGroup(bs: Benchmark.Suite) {
     const msg = te.encode('msg')
     const dst = te.encode('dst')
 
-    for (const id of Oprf.Group.supportedGroups) {
-        const gg = Oprf.Group.fromID(id)
+    for (const id of Crypto.Group.supportedGroups) {
+        const gg = Crypto.Group.fromID(id)
         const k = await gg.randomScalar()
         const P = gg.mulGen(k)
         const Q = P.mul(k)

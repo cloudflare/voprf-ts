@@ -8,12 +8,12 @@ import { jest } from '@jest/globals'
 import {
     getSupportedSuites,
     type GroupID,
-    Oprf,
+    Crypto,
     OPRFClient,
     OPRFServer,
     randomPrivateKey
 } from '../src/index.js'
-import { describeGroupTests } from './describeGroupTests.js'
+import { describeCryptoTests } from './describeCryptoTests.js'
 
 const { sign, importKey } = crypto.subtle
 
@@ -41,7 +41,7 @@ function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
     const [algorithm, key, data] = x
     if (algorithm === 'OPRF') {
         const algorithmName = (key.algorithm as EcdsaParams).name
-        const g = Oprf.Group.fromID(algorithmName as GroupID)
+        const g = Crypto.Group.fromID(algorithmName as GroupID)
         const P = g.desElt(new Uint8Array(data as ArrayBuffer))
         const serSk = new Uint8Array((key as CryptoKeyWithBuffer).keyData)
         const sk = g.desScalar(serSk)
@@ -52,7 +52,7 @@ function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
     throw new Error('bad algorithm')
 }
 
-describeGroupTests((g) => {
+describeCryptoTests((g) => {
     describe.each(getSupportedSuites(g))('supportsWebCrypto', (id) => {
         beforeAll(() => {
             jest.spyOn(crypto.subtle, 'importKey').mockImplementation(mockImportKey)

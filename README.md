@@ -104,13 +104,13 @@ npm install @noble/curves @noble/hashes
 Upon successful installation, the backend can be utilized as illustrated below:
 
 ```javascript
-import { Oprf } from '@cloudflare/voprf-ts';
+import { Crypto } from '@cloudflare/voprf-ts';
 import { CryptoNoble } from '@cloudflare/voprf-ts/crypto-noble';
 
-// Set Oprf.Crypto to use CryptoNoble. Ensure you understand the BigInt nuances related to your specific use case.
-Oprf.Crypto = CryptoNoble;
+// Ensure you understand the BigInt nuances related to your specific use case!
+Crypto.provider = CryptoNoble;
 
-console.log(Oprf.Crypto.Group.supportedGroups);
+console.log(Crypto.Group.supportedGroups);
 // Expected output: [ 'ristretto255', 'decaf448', 'P-256', 'P-384', 'P-521' ]
 
 // Proceed with the library usage as intended.

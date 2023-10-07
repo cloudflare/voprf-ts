@@ -14,6 +14,7 @@ import { checkSize, compat, errDeserialization } from '../util.js'
 
 import type { PrimeField } from './types.js'
 
+// Avoid circular dependency by using import type
 import type { GroupNb } from './group.js'
 
 export class ScalarNb implements Scalar {

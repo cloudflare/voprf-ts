@@ -72,7 +72,7 @@ class baseServer extends Oprf {
     }
 
     constructDLEQParams(): DLEQParams {
-        return { gg: this.gg, hashID: this.hashID, hash: Oprf.Crypto.hash, dst: '' }
+        return { gg: this.gg, hashID: this.hashID, dst: '' }
     }
 }
 

@@ -7,20 +7,19 @@ import {
     type DLEQParams,
     type Elt,
     type Scalar,
+    Crypto,
     DLEQProof,
-    DLEQProver,
-    Oprf
+    DLEQProver
 } from '../src/index.js'
-import { describeGroupTests } from './describeGroupTests.js'
+import { describeCryptoTests } from './describeCryptoTests.js'
 import { serdeClass } from './util.js'
 
-describeGroupTests((g) => {
+describeCryptoTests((g) => {
     describe.each(g.supportedGroups)('DLEQ', (id) => {
         const groupName = id
-        const gg = Oprf.Crypto.Group.fromID(id)
+        const gg = Crypto.Group.fromID(id)
         const params: DLEQParams = {
             gg,
-            hash: Oprf.Crypto.hash,
             hashID: 'SHA-256',
             dst: 'domain-sep'
         }

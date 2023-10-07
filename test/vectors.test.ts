@@ -17,7 +17,7 @@ import {
     VOPRFClient,
     VOPRFServer
 } from '../src/index.js'
-import { describeGroupTests } from './describeGroupTests.js'
+import { describeCryptoTests } from './describeCryptoTests.js'
 
 // Test vectors taken from reference implementation at https://github.com/cfrg/draft-irtf-cfrg-voprf
 import allVectors from './testdata/allVectors_v20.json'
@@ -74,7 +74,7 @@ class wrapPOPRFClient extends POPRFClient {
     }
 }
 
-describeGroupTests((g) => {
+describeCryptoTests((g) => {
     // Test vectors from https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf
     // https://tools.ietf.org/html/draft-irtf-cfrg-voprf-11
     describe.each(allVectors)('test-vectors', (testVector: (typeof allVectors)[number]) => {
