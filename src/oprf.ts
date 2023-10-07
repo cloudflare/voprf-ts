@@ -54,10 +54,6 @@ export function getSupportedSuites(g: GroupCons): Array<SuiteID> {
 }
 
 export abstract class Oprf {
-    public static get Group(): GroupCons {
-        return Crypto.Group
-    }
-
     static Mode = {
         OPRF: 0,
         VOPRF: 1,
