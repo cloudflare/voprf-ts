@@ -98,12 +98,19 @@ export abstract class Oprf {
         return Oprf.Group.fromID(getOprfParams(suite)[1])
     }
 
-    static getHash(suite: SuiteID): string {
+    static getHash(suite: SuiteID): HashID {
         return getOprfParams(suite)[2]
     }
 
     static getOprfSize(suite: SuiteID): number {
         return getOprfParams(suite)[3]
+    }
+
+    static getDLEQParams(suite: SuiteID): DLEQParams {
+        const EMPTY_DST = ''
+        const [, gid, hashID] = getOprfParams(suite)
+        const gg = Oprf.Group.fromID(gid)
+        return { gg, hashID, hash: Oprf.Crypto.hash, dst: EMPTY_DST }
     }
 
     static getDST(mode: ModeID, suite: SuiteID, name: string): Uint8Array {
@@ -127,6 +134,10 @@ export abstract class Oprf {
         this.gg = Oprf.Group.fromID(gid)
         this.hashID = hash
         this.mode = Oprf.validateMode(mode)
+    }
+
+    protected getDLEQParams(): DLEQParams {
+        return Oprf.getDLEQParams(this.ID)
     }
 
     protected getDST(name: string): Uint8Array {
@@ -193,7 +204,8 @@ export class Evaluation {
         return res
     }
 
-    static deserialize(params: DLEQParams, bytes: Uint8Array): Evaluation {
+    static deserialize(suite: SuiteID, bytes: Uint8Array): Evaluation {
+        const params = Oprf.getDLEQParams(suite)
         const { head: evalList, tail } = fromU16LenPrefixDes(params.gg.eltDes, bytes)
         let proof: DLEQProof | undefined
         const prSize = DLEQProof.size(params)
@@ -224,7 +236,8 @@ export class EvaluationRequest {
         return this.blinded.every((x, i) => x.isEqual(e.blinded[i as number]))
     }
 
-    static deserialize(g: Group, bytes: Uint8Array): EvaluationRequest {
+    static deserialize(suite: SuiteID, bytes: Uint8Array): EvaluationRequest {
+        const g = Oprf.getGroup(suite)
         const { head: blindedList } = fromU16LenPrefixDes(g.eltDes, bytes)
         return new EvaluationRequest(blindedList)
     }
@@ -253,10 +266,11 @@ export class FinalizeData {
         )
     }
 
-    static deserialize(g: Group, bytes: Uint8Array): FinalizeData {
+    static deserialize(suite: SuiteID, bytes: Uint8Array): FinalizeData {
+        const g = Oprf.getGroup(suite)
         const { head: inputs, tail: t0 } = fromU16LenPrefixUint8Array(bytes)
         const { head: blinds, tail: t1 } = fromU16LenPrefixDes(g.scalarDes, t0)
-        const evalReq = EvaluationRequest.deserialize(g, t1)
+        const evalReq = EvaluationRequest.deserialize(suite, t1)
         return new FinalizeData(inputs, blinds, evalReq)
     }
 }

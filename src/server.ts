@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { type DLEQParams, DLEQProver } from './dleq.js'
+import { DLEQProver } from './dleq.js'
 import type { Elt, Scalar } from './groupTypes.js'
 import { Evaluation, EvaluationRequest, type ModeID, Oprf, type SuiteID } from './oprf.js'
 import { ctEqual, zip } from './util.js'
@@ -70,10 +70,6 @@ class baseServer extends Oprf {
         const evaluated = await this.doBlindEvaluation(P, secret)
         return this.coreFinalize(input, evaluated.serialize(true), info)
     }
-
-    constructDLEQParams(): DLEQParams {
-        return { gg: this.gg, hashID: this.hashID, hash: Oprf.Crypto.hash, dst: '' }
-    }
 }
 
 export class OPRFServer extends baseServer {
@@ -103,7 +99,7 @@ export class VOPRFServer extends baseServer {
         const evalList = await Promise.all(
             req.blinded.map((b) => this.doBlindEvaluation(b, this.privateKey))
         )
-        const prover = new DLEQProver(this.constructDLEQParams())
+        const prover = new DLEQProver(this.getDLEQParams())
         const skS = this.gg.desScalar(this.privateKey)
         const pkS = this.gg.mulGen(skS)
         const proof = await prover.prove_batch(
@@ -131,7 +127,7 @@ export class POPRFServer extends baseServer {
         const evalList = await Promise.all(
             req.blinded.map((b) => this.doBlindEvaluation(b, secret))
         )
-        const prover = new DLEQProver(this.constructDLEQParams())
+        const prover = new DLEQProver(this.getDLEQParams())
         const kG = this.gg.mulGen(keyProof)
         const proof = await prover.prove_batch(
             keyProof,
