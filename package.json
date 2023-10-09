@@ -72,7 +72,7 @@
         "examples": "tsc -b examples && node ./lib/esm/examples/index.js",
         "lint": "eslint .",
         "bench": "tsc -b bench && node ./lib/esm/bench/index.js",
-        "format": "prettier './(src|test|bench|examples)/*.ts' --write"
+        "format": "prettier './(src|test|bench|examples)/**/!(*.d).ts' --write"
     },
     "optionalDependencies": {
         "@noble/curves": "1.2.0",
