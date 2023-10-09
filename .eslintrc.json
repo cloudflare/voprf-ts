@@ -7,7 +7,7 @@
     "extends": [
         "eslint:recommended",
         "plugin:security/recommended",
-        "prettier"
+        "plugin:prettier/recommended"
     ],
     "env": {
         "es2020": true,
