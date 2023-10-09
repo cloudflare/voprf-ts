@@ -52,8 +52,8 @@ function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
     throw new Error('bad algorithm')
 }
 
-describeCryptoTests((g) => {
-    describe.each(getSupportedSuites(g))('supportsWebCrypto', (id) => {
+describeCryptoTests((Group) => {
+    describe.each(getSupportedSuites(Group))('supportsWebCrypto', (id) => {
         beforeAll(() => {
             jest.spyOn(crypto.subtle, 'importKey').mockImplementation(mockImportKey)
             jest.spyOn(crypto.subtle, 'sign').mockImplementation(mockSign)

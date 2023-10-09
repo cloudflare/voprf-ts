@@ -14,8 +14,8 @@ import {
 } from '../src/index.js'
 import { describeCryptoTests } from './describeCryptoTests.js'
 
-describeCryptoTests((g) => {
-    describe.each(getSupportedSuites(g))('oprf-keys', (id) => {
+describeCryptoTests((Group) => {
+    describe.each(getSupportedSuites(Group))('oprf-keys', (id) => {
         describe(`${id}`, () => {
             const { Nsk, Npk } = getKeySizes(id)
             const gg = Oprf.getGroup(id)

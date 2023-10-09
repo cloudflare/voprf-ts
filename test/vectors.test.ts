@@ -74,14 +74,14 @@ class wrapPOPRFClient extends POPRFClient {
     }
 }
 
-describeCryptoTests((g) => {
+describeCryptoTests((Group) => {
     // Test vectors from https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf
     // https://tools.ietf.org/html/draft-irtf-cfrg-voprf-11
     describe.each(allVectors)('test-vectors', (testVector: (typeof allVectors)[number]) => {
         const mode = testVector.mode as ModeID
         const txtMode = Object.entries(Oprf.Mode)[mode as number][0]
 
-        const supported = getSupportedSuites(g)
+        const supported = getSupportedSuites(Group)
         const id = testVector.identifier as SuiteID
         const describeOrSkip = supported.includes(id) ? describe : describe.skip
 

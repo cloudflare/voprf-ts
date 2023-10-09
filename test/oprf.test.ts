@@ -34,9 +34,9 @@ async function testBadProof(
     await expect(client.finalize(finData, badEval)).rejects.toThrow(/proof failed/)
 }
 
-describeCryptoTests((g) => {
+describeCryptoTests((Group) => {
     describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
-        describe.each(getSupportedSuites(g))(`${modeName}`, (id) => {
+        describe.each(getSupportedSuites(Group))(`${modeName}`, (id) => {
             let server: OPRFServer | VOPRFServer | POPRFServer
             let client: OPRFClient | VOPRFClient | POPRFClient
 
