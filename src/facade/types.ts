@@ -14,26 +14,26 @@ type MODEMAP = {
 }
 
 type ValueType<T> = T[keyof T]
-type ModeID = ValueType<typeof MODE>
-type SuiteID = ValueType<typeof SUITE>
+export type ModeID = ValueType<typeof MODE>
+export type SuiteID = ValueType<typeof SUITE>
 
-interface Parcelable<T> {
+export interface Parcelable<T> {
     isEqual(other: T): boolean
 
     serialize(): Uint8Array
 }
 
-interface EvaluationRequest extends Parcelable<EvaluationRequest> {
+export interface EvaluationRequest extends Parcelable<EvaluationRequest> {
     readonly blinded: Array<Elt>
 }
 
-interface FinalizeData extends Parcelable<FinalizeData> {
+export interface FinalizeData extends Parcelable<FinalizeData> {
     readonly inputs: Array<Uint8Array>
     readonly blinds: Array<Scalar>
     readonly evalReq: EvaluationRequest
 }
 
-interface DLEQParams {
+export interface DLEQParams {
     // TODO: just use the GroupID ? and Group.fromID -> Group.get() with
     //  cached/getInstance semantics ?
     readonly gg: Group
@@ -41,7 +41,7 @@ interface DLEQParams {
     readonly hashID: HashID
 }
 
-interface DLEQProof extends Parcelable<DLEQProof> {
+export interface DLEQProof extends Parcelable<DLEQProof> {
     readonly params: Required<DLEQParams>
     readonly c: Scalar
     readonly s: Scalar
@@ -96,17 +96,17 @@ export interface Server<M extends ModeID = ModeID, S extends SuiteID = SuiteID>
     constructDLEQParams(): DLEQParams
 }
 
-interface KeyPair {
+export interface KeyPair {
     privateKey: Uint8Array
     publicKey: Uint8Array
 }
 
-interface KeySizes {
+export interface KeySizes {
     privateKey: number
     publicKey: number
 }
 
-interface KeyManager<M extends ModeID, S extends SuiteID> extends Modal<M, S> {
+export interface KeyManager<M extends ModeID, S extends SuiteID> extends Modal<M, S> {
     getKeySizes(): KeySizes
 
     validatePrivateKey(privateKey: Uint8Array): boolean
@@ -124,7 +124,7 @@ interface KeyManager<M extends ModeID, S extends SuiteID> extends Modal<M, S> {
     deriveKeyPair(seed: Uint8Array, info: Uint8Array): Promise<KeyPair>
 }
 
-interface Mode<M extends ModeID, S extends SuiteID> extends KeyManager<M, S>, Modal<M, S> {
+export interface Mode<M extends ModeID, S extends SuiteID> extends KeyManager<M, S>, Modal<M, S> {
     makeServer(privateKey: Uint8Array): Server<M, S>
 
     makeClient: M extends MODEMAP['oprf']
@@ -142,4 +142,3 @@ export interface OprfApi {
 
     makeMode<M extends ModeID, S extends SuiteID>(params: { mode: M; suite: S }): Mode<M, S>
 }
-

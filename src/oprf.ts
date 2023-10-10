@@ -31,7 +31,7 @@ function assertNever(name: string, x: unknown): never {
     throw new Error(`unexpected ${name} identifier: ${x}`)
 }
 
-function getOprfParams(id: string): readonly [SuiteID, GroupID, HashID, number] {
+export function getOprfParams(id: string): readonly [SuiteID, GroupID, HashID, number] {
     switch (id) {
         case Oprf.Suite.P256_SHA256:
             return [Oprf.Suite.P256_SHA256, Groups.P256, 'SHA-256', 32]

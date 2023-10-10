@@ -1,6 +1,9 @@
-import type { OprfApi } from './types.js'
+import { webcrypto } from 'node:crypto'
 
-export async function oprfExample(Oprf: OprfApi) {
+import type { OprfApi } from '../../src/facade/types.js'
+import { OprfTs } from '../../src/facade/impl.js'
+
+export async function facadeOprfExample(Oprf: OprfApi) {
     // Setup: Create client and server.
     const mode = Oprf.makeMode({
         suite: Oprf.Suite.P521_SHA512,
@@ -47,7 +50,7 @@ export async function oprfExample(Oprf: OprfApi) {
     console.log(`output (${output.length} bytes): ${Buffer.from(output).toString('hex')}\n`)
 }
 
-export async function poprfExample(Oprf: OprfApi) {
+export async function facadePoprfExample(Oprf: OprfApi) {
     // Setup: Create client and server.
     const mode = Oprf.makeMode({
         suite: Oprf.Suite.P256_SHA256,
@@ -88,7 +91,7 @@ export async function poprfExample(Oprf: OprfApi) {
     console.log(`output (${output.length} bytes): ${Buffer.from(output).toString('hex')}\n`)
 }
 
-export async function voprfExample(Oprf: OprfApi) {
+export async function facadeVoprfExample(Oprf: OprfApi) {
     // Setup: Create client and server.
     const mode = Oprf.makeMode({
         suite: Oprf.Suite.P384_SHA384,
@@ -125,3 +128,15 @@ export async function voprfExample(Oprf: OprfApi) {
     console.log(`input  (${input.length} bytes): ${input}`)
     console.log(`output (${output.length} bytes): ${Buffer.from(output).toString('hex')}\n`)
 }
+
+async function main() {
+    if (typeof crypto === 'undefined') {
+        Object.assign(global, { crypto: webcrypto })
+    }
+
+    await facadeOprfExample(OprfTs)
+    await facadeVoprfExample(OprfTs)
+    await facadePoprfExample(OprfTs)
+}
+
+main().catch(console.error)

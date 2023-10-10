@@ -70,6 +70,7 @@
         "test:cjs": "npm run test:build && node node_modules/.bin/jest --ci --selectProjects cjs --coverageDirectory coverage/cjs",
         "test:build": "tsc -b test test/tsconfig.cjs.json",
         "examples": "tsc -b examples && node ./lib/esm/examples/index.js",
+        "examples:facade": "tsc -b examples && node ./lib/esm/examples/facade/index.js",
         "lint": "eslint .",
         "bench": "tsc -b bench && node ./lib/esm/bench/index.js",
         "format": "prettier './(src|test|bench|examples)/*.ts' --write"

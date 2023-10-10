@@ -9,6 +9,11 @@ export const MODE = {
     VOPRF: 1, // 'voprf', // 1,
     POPRF: 2 // 'poprf' // 2
 } as const
+
+export type ModeOprf = typeof MODE.OPRF
+export type ModeVoprf = typeof MODE.VOPRF
+export type ModePoprf = typeof MODE.POPRF
+
 export const SUITE = {
     P256_SHA256: 'P256-SHA256',
     P384_SHA384: 'P384-SHA384',
