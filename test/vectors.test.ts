@@ -22,6 +22,7 @@ import { describeCryptoTests } from './describeCryptoTests.js'
 import allVectors from './testdata/allVectors_v20.json'
 import { jest } from '@jest/globals'
 import { zip } from './util.js'
+import type { Client, Server } from '../src/facade/types.js'
 
 function fromHex(x: string): Uint8Array {
     return Uint8Array.from(Buffer.from(x, 'hex'))
@@ -43,36 +44,6 @@ function toHexListClass(x: { serialize(): Uint8Array }[]): string {
     return toHexListUint8Array(x.map((xi) => xi.serialize()))
 }
 
-class wrapPOPRFServer extends POPRFServer {
-    info!: Uint8Array
-
-    blindEvaluate(
-        ...r: Parameters<OPRFServer['blindEvaluate']>
-    ): ReturnType<OPRFServer['blindEvaluate']> {
-        return super.blindEvaluate(r[0], this.info)
-    }
-
-    async evaluate(input: Uint8Array): Promise<Uint8Array> {
-        return super.evaluate(input, this.info)
-    }
-
-    async verifyFinalize(input: Uint8Array, output: Uint8Array): Promise<boolean> {
-        return super.verifyFinalize(input, output, this.info)
-    }
-}
-
-class wrapPOPRFClient extends POPRFClient {
-    info!: Uint8Array
-
-    blind(inputs: Uint8Array[]): ReturnType<OPRFClient['blind']> {
-        return super.blind(inputs)
-    }
-
-    finalize(...r: Parameters<OPRFClient['finalize']>): ReturnType<OPRFClient['finalize']> {
-        return super.finalize(...r, this.info)
-    }
-}
-
 describeCryptoTests(({ supportedSuites: supported }) => {
     // Test vectors from https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf
     // https://tools.ietf.org/html/draft-irtf-cfrg-voprf-11
@@ -85,8 +56,8 @@ describeCryptoTests(({ supportedSuites: supported }) => {
 
         describeOrSkip(`${txtMode}, ${id}`, () => {
             let skSm: Uint8Array
-            let server: OPRFServer | VOPRFServer | wrapPOPRFServer
-            let client: OPRFClient | VOPRFClient | wrapPOPRFClient
+            let server: Server
+            let client: Client
 
             beforeAll(async () => {
                 const seed = fromHex(testVector.seed)
@@ -105,8 +76,8 @@ describeCryptoTests(({ supportedSuites: supported }) => {
                         break
 
                     case Oprf.Mode.POPRF:
-                        server = new wrapPOPRFServer(id, skSm)
-                        client = new wrapPOPRFClient(id, pkSm)
+                        server = new POPRFServer(id, skSm)
+                        client = new POPRFClient(id, pkSm)
                         break
                 }
             })
@@ -121,7 +92,7 @@ describeCryptoTests(({ supportedSuites: supported }) => {
                 it('protocol', async () => {
                     // Creates a mock for randomBlinder method to
                     // inject the blind value given by the test vector.
-                    for (const c of [OPRFClient, VOPRFClient, wrapPOPRFClient]) {
+                    for (const c of [OPRFClient, VOPRFClient, POPRFClient]) {
                         let i = 0
                         jest.spyOn(c.prototype, 'randomBlinder').mockImplementation(() => {
                             const group = Oprf.getGroup(id)
@@ -129,10 +100,10 @@ describeCryptoTests(({ supportedSuites: supported }) => {
                         })
                     }
 
+                    // Server/Client types handle this fine :) because `info` is optional
+                    let info: Uint8Array | undefined = undefined
                     if (testVector.mode === Oprf.Mode.POPRF) {
-                        const info = fromHex((vi as any).Info as string) // eslint-disable-line @typescript-eslint/no-explicit-any
-                        ;(server as wrapPOPRFServer).info = info
-                        ;(client as wrapPOPRFClient).info = info
+                        info = fromHex((vi as { Info: string }).Info)
                     }
 
                     const input = fromHexList(vi.Input)
@@ -140,14 +111,14 @@ describeCryptoTests(({ supportedSuites: supported }) => {
                     expect(toHexListClass(finData.blinds)).toEqual(vi.Blind)
                     expect(toHexListClass(evalReq.blinded)).toEqual(vi.BlindedElement)
 
-                    const ev = await server.blindEvaluate(evalReq)
+                    const ev = await server.blindEvaluate(evalReq, info)
                     expect(toHexListClass(ev.evaluated)).toEqual(vi.EvaluationElement)
 
-                    const output = await client.finalize(finData, ev)
+                    const output = await client.finalize(finData, ev, info)
                     expect(toHexListUint8Array(output)).toEqual(vi.Output)
 
                     const serverCheckOutput = zip(input, output).every(
-                        async (inout) => await server.verifyFinalize(inout[0], inout[1])
+                        async (inout) => await server.verifyFinalize(inout[0], inout[1], info)
                     )
                     expect(serverCheckOutput).toBe(true)
                 })
