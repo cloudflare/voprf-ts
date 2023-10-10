@@ -1,7 +1,8 @@
 import { webcrypto } from 'node:crypto'
 
 import type { OprfApi } from '../../src/facade/types.js'
-import { OprfTs } from '../../src/facade/impl.js'
+import { Oprf } from '../../src/facade/impl.js'
+import { CryptoNoble } from '../../src/cryptoNoble.js'
 
 export async function facadeOprfExample(Oprf: OprfApi) {
     // Setup: Create client and server.
@@ -133,10 +134,21 @@ async function main() {
     if (typeof crypto === 'undefined') {
         Object.assign(global, { crypto: webcrypto })
     }
+    await facadeOprfExample(Oprf)
+    await facadeVoprfExample(Oprf)
 
-    await facadeOprfExample(OprfTs)
-    await facadeVoprfExample(OprfTs)
-    await facadePoprfExample(OprfTs)
+    const OprfNoble = Oprf.withConfig({ crypto: CryptoNoble })
+
+    await facadePoprfExample(OprfNoble)
+
+    // Currently can only use one provider at a time until the internals are refactored
+    try {
+        await facadePoprfExample(Oprf)
+        // noinspection ExceptionCaughtLocallyJS
+        throw new Error()
+    } catch (e) {
+        console.log('Expected error: ', (e as Error).message)
+    }
 }
 
 main().catch(console.error)

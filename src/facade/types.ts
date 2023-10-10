@@ -106,7 +106,8 @@ export interface KeySizes {
     publicKey: number
 }
 
-export interface KeyManager<M extends ModeID, S extends SuiteID> extends Modal<M, S> {
+export interface KeyManager<M extends ModeID = ModeID, S extends SuiteID = SuiteID>
+    extends Modal<M, S> {
     getKeySizes(): KeySizes
 
     validatePrivateKey(privateKey: Uint8Array): boolean
@@ -124,7 +125,9 @@ export interface KeyManager<M extends ModeID, S extends SuiteID> extends Modal<M
     deriveKeyPair(seed: Uint8Array, info: Uint8Array): Promise<KeyPair>
 }
 
-export interface Mode<M extends ModeID, S extends SuiteID> extends KeyManager<M, S>, Modal<M, S> {
+export interface Mode<M extends ModeID = ModeID, S extends SuiteID = SuiteID>
+    extends KeyManager<M, S>,
+        Modal<M, S> {
     makeServer(privateKey: Uint8Array): Server<M, S>
 
     makeClient: M extends MODEMAP['oprf']
@@ -138,7 +141,7 @@ export interface OprfApi {
 
     readonly crypto: CryptoProvider
 
-    withConfiguration(config: { crypto: CryptoProvider }): OprfApi
+    withConfig(config: { crypto: CryptoProvider }): OprfApi
 
     makeMode<M extends ModeID, S extends SuiteID>(params: { mode: M; suite: S }): Mode<M, S>
 }
