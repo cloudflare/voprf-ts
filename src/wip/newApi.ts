@@ -1,5 +1,5 @@
-import type { CryptoProvider, HashID } from './cryptoTypes.js'
-import type { Elt, Group, Scalar } from './groupTypes.js'
+import type { CryptoProvider, HashID } from '../cryptoTypes'
+import type { Elt, Group, Scalar } from '../groupTypes'
 
 export const MODE = {
     // Otherwise the type inference for Client<?> is Client<2>
@@ -105,7 +105,7 @@ interface KeySizes {
     publicKey: number
 }
 
-interface KeyManager {
+interface KeyManager<M extends ModeID, S extends SuiteID> extends Modal<M, S> {
     getKeySizes(): KeySizes
 
     validatePrivateKey(privateKey: Uint8Array): boolean
@@ -123,12 +123,7 @@ interface KeyManager {
     deriveKeyPair(seed: Uint8Array, info: Uint8Array): Promise<KeyPair>
 }
 
-interface Mode<M extends ModeID, S extends SuiteID> extends KeyManager, Modal<M, S> {
-    readonly modeID: M
-    readonly suiteID: S
-
-    group: Group
-
+interface Mode<M extends ModeID, S extends SuiteID> extends KeyManager<M, S>, Modal<M, S> {
     makeServer(privateKey: Uint8Array): Server<M, S>
 
     makeClient: M extends 'oprf' ? () => Client<M, S> : (publicKey: Uint8Array) => Client<M, S>
