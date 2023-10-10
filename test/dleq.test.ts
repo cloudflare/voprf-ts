@@ -19,6 +19,7 @@ describeCryptoTests(({ supportedGroups }) => {
         const groupName = id
         const gg = CryptoImpl.Group.fromID(id)
         const params: DLEQParams = {
+            crypto: CryptoImpl,
             gg,
             hashID: 'SHA-256',
             dst: 'domain-sep'

@@ -21,7 +21,7 @@ import {
     toU16LenPrefixClass,
     toU16LenPrefixUint8Array
 } from './util.js'
-import type { HashID } from './cryptoTypes.js'
+import type { CryptoProvider, HashID } from './cryptoTypes.js'
 import { CryptoImpl } from './cryptoImpl.js'
 
 export type ModeID = (typeof Oprf.Mode)[keyof typeof Oprf.Mode]
@@ -112,13 +112,17 @@ export abstract class Oprf {
 
     readonly modeID: ModeID
     readonly suiteID: SuiteID
-    readonly gg: Group
     readonly hashID: HashID
+    readonly gg: Group
 
-    constructor(mode: ModeID, suite: SuiteID) {
+    protected constructor(
+        mode: ModeID,
+        suite: SuiteID,
+        protected readonly crypto: CryptoProvider = CryptoImpl
+    ) {
         const [ID, gid, hash] = getOprfParams(suite)
+        this.gg = this.crypto.Group.fromID(gid)
         this.suiteID = ID
-        this.gg = CryptoImpl.Group.fromID(gid)
         this.hashID = hash
         this.modeID = Oprf.validateMode(mode)
     }
@@ -143,7 +147,7 @@ export abstract class Oprf {
             ...toU16LenPrefix(issuedElement),
             new TextEncoder().encode(Oprf.LABELS.FinalizeDST)
         ])
-        return await CryptoImpl.hash(this.hashID, hashInput)
+        return await this.crypto.hash(this.hashID, hashInput)
     }
 
     protected scalarFromInfo(info: Uint8Array): Promise<Scalar> {

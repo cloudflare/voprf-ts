@@ -15,10 +15,11 @@ import {
 
 import { zip } from './util.js'
 import type { Client } from './facade/types.js'
+import type { CryptoProvider } from './cryptoTypes.js'
 
 class baseClient extends Oprf {
-    constructor(mode: ModeID, suite: SuiteID) {
-        super(mode, suite)
+    constructor(mode: ModeID, suite: SuiteID, crypto?: CryptoProvider) {
+        super(mode, suite, crypto)
     }
 
     randomBlinder(): Promise<Scalar> {
@@ -69,8 +70,8 @@ class baseClient extends Oprf {
 export class OPRFClient extends baseClient implements Client<typeof Oprf.Mode.OPRF> {
     readonly modeID = Oprf.Mode.OPRF
 
-    constructor(suite: SuiteID) {
-        super(Oprf.Mode.OPRF, suite)
+    constructor(suite: SuiteID, crypto?: CryptoProvider) {
+        super(Oprf.Mode.OPRF, suite, crypto)
     }
 
     finalize(finData: FinalizeData, evaluation: Evaluation): Promise<Array<Uint8Array>> {
@@ -83,9 +84,10 @@ export class VOPRFClient extends baseClient implements Client<typeof Oprf.Mode.V
 
     constructor(
         suite: SuiteID,
-        private readonly pubKeyServer: Uint8Array
+        private readonly pubKeyServer: Uint8Array,
+        crypto?: CryptoProvider
     ) {
-        super(Oprf.Mode.VOPRF, suite)
+        super(Oprf.Mode.VOPRF, suite, crypto)
     }
 
     async finalize(finData: FinalizeData, evaluation: Evaluation): Promise<Array<Uint8Array>> {
@@ -117,9 +119,10 @@ export class POPRFClient extends baseClient implements Client<typeof Oprf.Mode.P
 
     constructor(
         suite: SuiteID,
-        private readonly pubKeyServer: Uint8Array
+        private readonly pubKeyServer: Uint8Array,
+        crypto?: CryptoProvider
     ) {
-        super(Oprf.Mode.POPRF, suite)
+        super(Oprf.Mode.POPRF, suite, crypto)
     }
 
     private async pointFromInfo(info: Uint8Array): Promise<Elt> {

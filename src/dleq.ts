@@ -5,15 +5,15 @@
 //
 // Implementation of batched discrete log equivalents proofs (DLEQ) as
 // described in https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-21#name-discrete-logarithm-equivale
-import type { HashID } from './cryptoTypes.js'
+import type { CryptoProvider, HashID } from './cryptoTypes.js'
 import type { Elt, Group, Scalar } from './groupTypes.js'
 import { checkSize, joinAll, to16bits, toU16LenPrefix } from './util.js'
-import { CryptoImpl } from './cryptoImpl.js'
 
 export interface DLEQParams {
     readonly gg: Group
     readonly dst: string
     readonly hashID: HashID
+    readonly crypto: CryptoProvider
 }
 
 const LABELS = {
@@ -35,7 +35,7 @@ async function computeComposites(
     const Bm = b.serialize()
     const seedDST = te.encode(LABELS.Seed + params.dst)
     const h1Input = joinAll([...toU16LenPrefix(Bm), ...toU16LenPrefix(seedDST)])
-    const seed = await CryptoImpl.hash(params.hashID, h1Input)
+    const seed = await params.crypto.hash(params.hashID, h1Input)
 
     const compositeLabel = te.encode(LABELS.Composite)
     const h2sDST = te.encode(LABELS.HashToScalar + params.dst)

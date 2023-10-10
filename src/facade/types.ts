@@ -39,6 +39,7 @@ export interface DLEQParams {
     readonly gg: Group
     readonly dst: string
     readonly hashID: HashID
+    readonly crypto: CryptoProvider
 }
 
 export interface DLEQProof extends Parcelable<DLEQProof> {
