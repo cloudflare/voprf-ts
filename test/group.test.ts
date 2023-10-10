@@ -6,9 +6,9 @@
 import { describeCryptoTests } from './describeCryptoTests.js'
 import { serdesEquals } from './util.js'
 
-describeCryptoTests(({ cryptoProvider, supportedGroups }) => {
+describeCryptoTests(({ provider, supportedGroups }) => {
     describe.each(supportedGroups)('%s', (id) => {
-        const gg = cryptoProvider.Group.fromID(id)
+        const gg = provider.Group.fromID(id)
 
         it('serdeElement', async () => {
             const P = gg.mulGen(await gg.randomScalar())

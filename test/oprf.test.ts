@@ -34,28 +34,28 @@ async function testBadProof(
     await expect(client.finalize(finData, badEval)).rejects.toThrow(/proof failed/)
 }
 
-describeCryptoTests(({ cryptoProvider, supportedSuites }) => {
+describeCryptoTests(({ provider, supportedSuites }) => {
     describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
         describe.each(supportedSuites)(`${modeName}`, (id) => {
             let server: Server
             let client: Client
 
             beforeAll(async () => {
-                const privateKey = await randomPrivateKey(id, cryptoProvider)
-                const publicKey = generatePublicKey(id, privateKey, cryptoProvider)
+                const privateKey = await randomPrivateKey(id, provider)
+                const publicKey = generatePublicKey(id, privateKey, provider)
                 switch (mode) {
                     case Oprf.Mode.OPRF:
-                        server = new OPRFServer(id, privateKey, cryptoProvider)
-                        client = new OPRFClient(id, cryptoProvider)
+                        server = new OPRFServer(id, privateKey, provider)
+                        client = new OPRFClient(id, provider)
                         break
 
                     case Oprf.Mode.VOPRF:
-                        server = new VOPRFServer(id, privateKey, cryptoProvider)
-                        client = new VOPRFClient(id, publicKey, cryptoProvider)
+                        server = new VOPRFServer(id, privateKey, provider)
+                        client = new VOPRFClient(id, publicKey, provider)
                         break
                     case Oprf.Mode.POPRF:
-                        server = new POPRFServer(id, privateKey, cryptoProvider)
-                        client = new POPRFClient(id, publicKey, cryptoProvider)
+                        server = new POPRFServer(id, privateKey, provider)
+                        client = new POPRFClient(id, publicKey, provider)
                         break
                 }
             })

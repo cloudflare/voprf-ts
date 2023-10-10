@@ -30,7 +30,7 @@ function mockImportKey(...x: Parameters<typeof importKey>): ReturnType<typeof im
     throw new Error('bad algorithm')
 }
 
-describeCryptoTests(({ cryptoProvider: cryptoProvider, supportedSuites }) => {
+describeCryptoTests(({ provider: cryptoProvider, supportedSuites }) => {
     function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
         const [algorithm, key, data] = x
         if (algorithm === 'OPRF') {

@@ -7,12 +7,12 @@ import { type DLEQParams, type Elt, type Scalar, DLEQProof, DLEQProver } from '.
 import { describeCryptoTests } from './describeCryptoTests.js'
 import { serdeClass } from './util.js'
 
-describeCryptoTests(({ cryptoProvider, supportedGroups }) => {
+describeCryptoTests(({ provider, supportedGroups }) => {
     describe.each(supportedGroups)('DLEQ', (id) => {
         const groupName = id
-        const gg = cryptoProvider.Group.fromID(id)
+        const gg = provider.Group.fromID(id)
         const params: DLEQParams = {
-            crypto: cryptoProvider,
+            crypto: provider,
             gg,
             hashID: 'SHA-256',
             dst: 'domain-sep'
