@@ -1,3 +1,6 @@
+import type { CryptoProvider, HashID } from './cryptoTypes.js'
+import type { Elt, Group, Scalar } from './groupTypes.js'
+
 export const MODE = {
     // Otherwise the type inference for Client<?> is Client<2>
     // can easily create some kind of utils to convert numbers to MODE
@@ -18,17 +21,78 @@ export const SUITE = {
 } as const
 
 type ValueType<T> = T[keyof T]
-
-export type ModeID = ValueType<typeof MODE>
-export type SuiteID = ValueType<typeof SUITE>
-
-import type { CryptoProvider, HashID } from './cryptoTypes.js'
-import type { Elt, Group, Scalar } from './groupTypes.js'
+type ModeID = ValueType<typeof MODE>
+type SuiteID = ValueType<typeof SUITE>
 
 interface Parcelable<T> {
     isEqual(other: T): boolean
 
     serialize(): Uint8Array
+}
+
+interface EvaluationRequest extends Parcelable<EvaluationRequest> {
+    readonly blinded: Array<Elt>
+}
+
+interface FinalizeData extends Parcelable<FinalizeData> {
+    readonly inputs: Array<Uint8Array>
+    readonly blinds: Array<Scalar>
+    readonly evalReq: EvaluationRequest
+}
+
+interface DLEQParams {
+    // TODO: just use the GroupID ? and Group.fromID -> Group.get() with
+    //  cached/getInstance semantics ?
+    readonly gg: Group
+    readonly dst: string
+    readonly hashID: HashID
+}
+
+interface DLEQProof extends Parcelable<DLEQProof> {
+    readonly params: Required<DLEQParams>
+    readonly c: Scalar
+    readonly s: Scalar
+
+    verify(p0: [Elt, Elt], p1: [Elt, Elt]): Promise<boolean>
+
+    verify_batch(p0: [Elt, Elt], p1s: Array<[Elt, Elt]>): Promise<boolean>
+}
+
+interface Evaluation extends Parcelable<Evaluation> {
+    readonly mode: ModeID
+    readonly evaluated: Array<Elt>
+    readonly proof?: DLEQProof
+}
+
+interface Modal<M extends ModeID, S extends SuiteID> {
+    readonly modeID: M
+    readonly suiteID: S
+}
+
+interface Client<M extends ModeID, S extends SuiteID> extends Modal<M, S> {
+    blind(inputs: Uint8Array[]): Promise<[FinalizeData, EvaluationRequest]>
+
+    finalize: M extends 'poprf'
+        ? (
+              finData: FinalizeData,
+              evaluation: Evaluation,
+              info?: Uint8Array
+          ) => Promise<Array<Uint8Array>>
+        : (finData: FinalizeData, evaluation: Evaluation) => Promise<Array<Uint8Array>>
+}
+
+interface Server<M extends ModeID, S extends SuiteID> extends Modal<M, S> {
+    blindEvaluate: M extends 'poprf'
+        ? (req: EvaluationRequest, info?: Uint8Array) => Promise<Evaluation>
+        : (req: EvaluationRequest) => Promise<Evaluation>
+
+    evaluate: M extends 'poprf'
+        ? (evaluate: Uint8Array, info?: Uint8Array) => Promise<boolean>
+        : (evaluate: Uint8Array) => Promise<boolean>
+
+    verifyFinalize: M extends 'poprf'
+        ? (input: Uint8Array, output: Uint8Array, info?: Uint8Array) => Promise<boolean>
+        : (input: Uint8Array, output: Uint8Array) => Promise<boolean>
 }
 
 interface KeyPair {
@@ -59,73 +123,15 @@ interface KeyManager {
     deriveKeyPair(seed: Uint8Array, info: Uint8Array): Promise<KeyPair>
 }
 
-interface DLEQParams {
-    // TODO: just use the GroupID ?
-    readonly gg: Group
-    readonly dst: string
-    readonly hashID: HashID
-}
+interface Mode<M extends ModeID, S extends SuiteID> extends KeyManager, Modal<M, S> {
+    readonly modeID: M
+    readonly suiteID: S
 
-interface DLEQProof extends Parcelable<DLEQProof> {
-    readonly params: Required<DLEQParams>
-    readonly c: Scalar
-    readonly s: Scalar
-
-    verify(p0: [Elt, Elt], p1: [Elt, Elt]): Promise<boolean>
-
-    verify_batch(p0: [Elt, Elt], p1s: Array<[Elt, Elt]>): Promise<boolean>
-}
-
-interface FinalizeData extends Parcelable<FinalizeData> {
-    readonly inputs: Array<Uint8Array>
-    readonly blinds: Array<Scalar>
-    readonly evalReq: EvaluationRequest
-}
-
-interface EvaluationRequest extends Parcelable<EvaluationRequest> {
-    readonly blinded: Array<Elt>
-}
-
-interface Evaluation extends Parcelable<Evaluation> {
-    readonly mode: ModeID
-    readonly evaluated: Array<Elt>
-    readonly proof?: DLEQProof
-}
-
-interface Client<T extends ModeID> {
-    blind(inputs: Uint8Array[]): Promise<[FinalizeData, EvaluationRequest]>
-
-    finalize: T extends 'poprf'
-        ? (
-              finData: FinalizeData,
-              evaluation: Evaluation,
-              info?: Uint8Array
-          ) => Promise<Array<Uint8Array>>
-        : (finData: FinalizeData, evaluation: Evaluation) => Promise<Array<Uint8Array>>
-}
-
-interface Server<T extends ModeID> {
-    blindEvaluate: T extends 'poprf'
-        ? (req: EvaluationRequest, info?: Uint8Array) => Promise<Evaluation>
-        : (req: EvaluationRequest) => Promise<Evaluation>
-
-    evaluate: T extends 'poprf'
-        ? (evaluate: Uint8Array, info?: Uint8Array) => Promise<boolean>
-        : (evaluate: Uint8Array) => Promise<boolean>
-
-    verifyFinalize: T extends 'poprf'
-        ? (input: Uint8Array, output: Uint8Array, info?: Uint8Array) => Promise<boolean>
-        : (input: Uint8Array, output: Uint8Array) => Promise<boolean>
-}
-
-interface Suite<T extends ModeID> extends KeyManager {
-    modeID: T
-    suiteID: SuiteID
     group: Group
 
-    makeServer(privateKey: Uint8Array): Server<T>
+    makeServer(privateKey: Uint8Array): Server<M, S>
 
-    makeClient: T extends 'oprf' ? () => Client<T> : (publicKey: Uint8Array) => Client<T>
+    makeClient: M extends 'oprf' ? () => Client<M, S> : (publicKey: Uint8Array) => Client<M, S>
 }
 
 interface OprfApi {
@@ -136,19 +142,19 @@ interface OprfApi {
 
     withConfiguration(config: { crypto: CryptoProvider }): OprfApi
 
-    makeSuite<T extends ModeID>(params: { mode: T; suite: SuiteID }): Suite<T>
+    makeMode<M extends ModeID, S extends SuiteID>(params: { mode: M; suite: S }): Mode<M, S>
 }
 
 export async function oprfExample(Oprf: OprfApi) {
     // Setup: Create client and server.
-    const suite = Oprf.makeSuite({
+    const mode = Oprf.makeMode({
         suite: Oprf.Suite.P521_SHA512,
         mode: Oprf.Mode.OPRF
     })
-    const privateKey = await suite.randomPrivateKey()
+    const privateKey = await mode.randomPrivateKey()
 
-    const server = suite.makeServer(privateKey)
-    const client = suite.makeClient()
+    const server = mode.makeServer(privateKey)
+    const client = mode.makeClient()
 
     // Client                                       Server
     // ====================================================
@@ -181,22 +187,22 @@ export async function oprfExample(Oprf: OprfApi) {
     //
     // output = Finalize(finData, evaluation, info*)
     const [output] = await client.finalize(finData, evaluation)
-    console.log(`Example OPRF - SuiteID: ${Oprf.Suite.P521_SHA512}`)
+    console.log(`Example OPRF - SuiteID: ${mode.suiteID}`)
     console.log(`input  (${input.length} bytes): ${input}`)
     console.log(`output (${output.length} bytes): ${Buffer.from(output).toString('hex')}\n`)
 }
 
 export async function poprfExample(Oprf: OprfApi) {
     // Setup: Create client and server.
-    const suite = Oprf.makeSuite({
+    const mode = Oprf.makeMode({
         suite: Oprf.Suite.P256_SHA256,
         mode: Oprf.Mode.POPRF
     })
-    const privateKey = await suite.randomPrivateKey()
-    const publicKey = suite.generatePublicKey(privateKey)
+    const privateKey = await mode.randomPrivateKey()
+    const publicKey = mode.generatePublicKey(privateKey)
 
-    const server = suite.makeServer(privateKey)
-    const client = suite.makeClient(publicKey)
+    const server = mode.makeServer(privateKey)
+    const client = mode.makeClient(publicKey)
 
     // Client                                       Server
     // ====================================================
@@ -221,7 +227,7 @@ export async function poprfExample(Oprf: OprfApi) {
     // proof that the server used the expected private key for the evaluation.
     const [output] = await client.finalize(finData, evaluation, infoBytes)
 
-    console.log(`Example POPRF - SuiteID: ${Oprf.Suite.P256_SHA256}`)
+    console.log(`Example POPRF - SuiteID: ${mode.suiteID}`)
     console.log(`input  (${input.length} bytes): ${input}`)
     console.log(`info  (${info.length} bytes): ${info}`)
     console.log(`output (${output.length} bytes): ${Buffer.from(output).toString('hex')}\n`)
@@ -229,15 +235,15 @@ export async function poprfExample(Oprf: OprfApi) {
 
 export async function voprfExample(Oprf: OprfApi) {
     // Setup: Create client and server.
-    const suite = Oprf.makeSuite({
+    const mode = Oprf.makeMode({
         suite: Oprf.Suite.P384_SHA384,
         mode: Oprf.Mode.VOPRF
     })
-    const privateKey = await suite.randomPrivateKey()
-    const publicKey = suite.generatePublicKey(privateKey)
+    const privateKey = await mode.randomPrivateKey()
+    const publicKey = mode.generatePublicKey(privateKey)
 
-    const server = suite.makeServer(privateKey)
-    const client = suite.makeClient(publicKey)
+    const server = mode.makeServer(privateKey)
+    const client = mode.makeClient(publicKey)
 
     // Client                                       Server
     // ====================================================
@@ -260,7 +266,7 @@ export async function voprfExample(Oprf: OprfApi) {
     // proof that the server used the expected private key for the evaluation.
     const [output] = await client.finalize(finData, evaluation)
 
-    console.log(`Example VOPRF - SuiteID: ${Oprf.Suite.P384_SHA384}`)
+    console.log(`Example VOPRF - SuiteID: ${mode.suiteID}`)
     console.log(`input  (${input.length} bytes): ${input}`)
     console.log(`output (${output.length} bytes): ${Buffer.from(output).toString('hex')}\n`)
 }
