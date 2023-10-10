@@ -20,7 +20,7 @@ import {
 import { describeCryptoTests } from './describeCryptoTests.js'
 
 import { serdeClass } from './util.js'
-import type { Client, Server } from '../src/wip/newApi.js'
+import type { Client, Server } from '../src/facade/types.js'
 
 async function testBadProof(
     client: Client,

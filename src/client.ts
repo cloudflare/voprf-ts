@@ -14,7 +14,7 @@ import {
 } from './oprf.js'
 
 import { zip } from './util.js'
-import type { Client } from './wip/newApi.js'
+import type { Client } from './facade/types.js'
 
 class baseClient extends Oprf {
     constructor(mode: ModeID, suite: SuiteID) {

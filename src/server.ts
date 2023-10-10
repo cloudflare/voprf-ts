@@ -7,7 +7,7 @@ import { type DLEQParams, DLEQProver } from './dleq.js'
 import type { Elt, Scalar } from './groupTypes.js'
 import { Evaluation, EvaluationRequest, Oprf, type ModeID, type SuiteID } from './oprf.js'
 import { ctEqual, zip } from './util.js'
-import type { Server } from './wip/newApi'
+import type { Server } from './facade/types.js'
 
 class baseServer extends Oprf {
     protected privateKey: Uint8Array
