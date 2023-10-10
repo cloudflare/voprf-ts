@@ -8,12 +8,13 @@ import {
     Evaluation,
     EvaluationRequest,
     FinalizeData,
-    type ModeID,
     Oprf,
+    type ModeID,
     type SuiteID
 } from './oprf.js'
 
 import { zip } from './util.js'
+import type { Client } from './wip/newApi.js'
 
 class baseClient extends Oprf {
     constructor(mode: ModeID, suite: SuiteID) {
@@ -65,16 +66,21 @@ class baseClient extends Oprf {
     }
 }
 
-export class OPRFClient extends baseClient {
+export class OPRFClient extends baseClient implements Client<typeof Oprf.Mode.OPRF> {
+    readonly modeID = Oprf.Mode.OPRF
+
     constructor(suite: SuiteID) {
         super(Oprf.Mode.OPRF, suite)
     }
+
     finalize(finData: FinalizeData, evaluation: Evaluation): Promise<Array<Uint8Array>> {
         return super.doFinalize(finData, evaluation)
     }
 }
 
-export class VOPRFClient extends baseClient {
+export class VOPRFClient extends baseClient implements Client<typeof Oprf.Mode.VOPRF> {
+    readonly modeID = Oprf.Mode.VOPRF
+
     constructor(
         suite: SuiteID,
         private readonly pubKeyServer: Uint8Array
@@ -106,7 +112,9 @@ export class VOPRFClient extends baseClient {
     }
 }
 
-export class POPRFClient extends baseClient {
+export class POPRFClient extends baseClient implements Client<typeof Oprf.Mode.POPRF> {
+    readonly modeID = Oprf.Mode.POPRF
+
     constructor(
         suite: SuiteID,
         private readonly pubKeyServer: Uint8Array

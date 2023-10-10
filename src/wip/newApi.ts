@@ -1,16 +1,28 @@
-import type { CryptoProvider, HashID } from '../cryptoTypes'
-import type { Elt, Group, Scalar } from '../groupTypes'
+import type { CryptoProvider, HashID } from '../cryptoTypes.js'
+import type { Elt, Group, Scalar } from '../groupTypes.js'
 
 export const MODE = {
-    // Otherwise the type inference for Client<?> is Client<2>
-    // can easily create some kind of utils to convert numbers to MODE
-    // in any case, you need to when parsing tests
+    // TODO: use string
+    // Otherwise the type inference shown in IDES is for Client<?, ?> is Client<2, 'P256-SHA256'>
+    // Could easily create some kind of utils to convert numbers to MODE
+    // in any case, you already need to faff around
     // see: vector tests
     // const txtMode = Object.entries(Oprf.Mode)[mode as number][0]
-    OPRF: 'oprf', // 0,
-    VOPRF: 'voprf', // 1,
-    POPRF: 'poprf' // 2
+    OPRF: 0, // 'oprf', // 0,
+    VOPRF: 1, // 'voprf', // 1,
+    POPRF: 2 // 'poprf' // 2
 } as const
+
+// TODO: this shouldn't be needed, but is while experimenting with string modes
+// using number modes to retro type the old (implementing) client/servers to this
+type MODEMAP = {
+    oprf: 0
+    voprf: 1
+    poprf: 2
+    [0]: 'oprf'
+    [1]: 'voprf'
+    [2]: 'poprf'
+}
 
 export const SUITE = {
     P256_SHA256: 'P256-SHA256',
@@ -64,15 +76,20 @@ interface Evaluation extends Parcelable<Evaluation> {
     readonly proof?: DLEQProof
 }
 
-interface Modal<M extends ModeID, S extends SuiteID> {
+export interface Modal<M extends ModeID, S extends SuiteID> {
     readonly modeID: M
+    // This is just to check if this works
     readonly suiteID: S
+
+    // TODO:
+    readonly gg: Group
 }
 
-interface Client<M extends ModeID, S extends SuiteID> extends Modal<M, S> {
+export interface Client<M extends ModeID = ModeID, S extends SuiteID = SuiteID>
+    extends Modal<M, S> {
     blind(inputs: Uint8Array[]): Promise<[FinalizeData, EvaluationRequest]>
 
-    finalize: M extends 'poprf'
+    finalize: M extends MODEMAP['poprf']
         ? (
               finData: FinalizeData,
               evaluation: Evaluation,
@@ -81,18 +98,21 @@ interface Client<M extends ModeID, S extends SuiteID> extends Modal<M, S> {
         : (finData: FinalizeData, evaluation: Evaluation) => Promise<Array<Uint8Array>>
 }
 
-interface Server<M extends ModeID, S extends SuiteID> extends Modal<M, S> {
-    blindEvaluate: M extends 'poprf'
+export interface Server<M extends ModeID = ModeID, S extends SuiteID = SuiteID>
+    extends Modal<M, S> {
+    blindEvaluate: M extends MODEMAP['poprf']
         ? (req: EvaluationRequest, info?: Uint8Array) => Promise<Evaluation>
         : (req: EvaluationRequest) => Promise<Evaluation>
 
-    evaluate: M extends 'poprf'
-        ? (evaluate: Uint8Array, info?: Uint8Array) => Promise<boolean>
-        : (evaluate: Uint8Array) => Promise<boolean>
+    evaluate: M extends MODEMAP['poprf']
+        ? (evaluate: Uint8Array, info?: Uint8Array) => Promise<Uint8Array>
+        : (evaluate: Uint8Array) => Promise<Uint8Array>
 
-    verifyFinalize: M extends 'poprf'
+    verifyFinalize: M extends MODEMAP['poprf']
         ? (input: Uint8Array, output: Uint8Array, info?: Uint8Array) => Promise<boolean>
         : (input: Uint8Array, output: Uint8Array) => Promise<boolean>
+
+    constructDLEQParams(): DLEQParams
 }
 
 interface KeyPair {
@@ -126,7 +146,9 @@ interface KeyManager<M extends ModeID, S extends SuiteID> extends Modal<M, S> {
 interface Mode<M extends ModeID, S extends SuiteID> extends KeyManager<M, S>, Modal<M, S> {
     makeServer(privateKey: Uint8Array): Server<M, S>
 
-    makeClient: M extends 'oprf' ? () => Client<M, S> : (publicKey: Uint8Array) => Client<M, S>
+    makeClient: M extends MODEMAP['oprf']
+        ? () => Client<M, S>
+        : (publicKey: Uint8Array) => Client<M, S>
 }
 
 interface OprfApi {

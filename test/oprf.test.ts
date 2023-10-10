@@ -20,10 +20,11 @@ import {
 import { describeCryptoTests } from './describeCryptoTests.js'
 
 import { serdeClass } from './util.js'
+import type { Client, Server } from '../src/wip/newApi.js'
 
 async function testBadProof(
-    client: OPRFClient,
-    server: OPRFServer,
+    client: Client,
+    server: Server,
     finData: FinalizeData,
     evaluation: Evaluation
 ) {
@@ -36,8 +37,8 @@ async function testBadProof(
 describeCryptoTests(({ supportedSuites }) => {
     describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
         describe.each(supportedSuites)(`${modeName}`, (id) => {
-            let server: OPRFServer | VOPRFServer | POPRFServer
-            let client: OPRFClient | VOPRFClient | POPRFClient
+            let server: Server
+            let client: Client
 
             beforeAll(async () => {
                 const privateKey = await randomPrivateKey(id)

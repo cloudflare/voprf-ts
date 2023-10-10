@@ -5,8 +5,9 @@
 
 import { type DLEQParams, DLEQProver } from './dleq.js'
 import type { Elt, Scalar } from './groupTypes.js'
-import { Evaluation, EvaluationRequest, type ModeID, Oprf, type SuiteID } from './oprf.js'
+import { Evaluation, EvaluationRequest, Oprf, type ModeID, type SuiteID } from './oprf.js'
 import { ctEqual, zip } from './util.js'
+import type { Server } from './wip/newApi'
 
 class baseServer extends Oprf {
     protected privateKey: Uint8Array
@@ -58,7 +59,7 @@ class baseServer extends Oprf {
 
     protected async doEvaluate(input: Uint8Array, info = new Uint8Array(0)): Promise<Uint8Array> {
         let secret = this.privateKey
-        if (this.mode === Oprf.Mode.POPRF) {
+        if (this.modeID === Oprf.Mode.POPRF) {
             const [, evalSecret] = await this.secretFromInfo(info)
             secret = evalSecret.serialize()
         }
@@ -76,29 +77,36 @@ class baseServer extends Oprf {
     }
 }
 
-export class OPRFServer extends baseServer {
+export class OPRFServer extends baseServer implements Server<typeof Oprf.Mode.OPRF> {
+    readonly modeID = Oprf.Mode.OPRF
+
     constructor(suite: SuiteID, privateKey: Uint8Array) {
         super(Oprf.Mode.OPRF, suite, privateKey)
     }
 
     async blindEvaluate(req: EvaluationRequest): Promise<Evaluation> {
         return new Evaluation(
-            this.mode,
+            this.modeID,
             await Promise.all(req.blinded.map((b) => this.doBlindEvaluation(b, this.privateKey)))
         )
     }
+
     async evaluate(input: Uint8Array): Promise<Uint8Array> {
         return this.doEvaluate(input)
     }
+
     async verifyFinalize(input: Uint8Array, output: Uint8Array): Promise<boolean> {
         return ctEqual(output, await this.doEvaluate(input))
     }
 }
 
-export class VOPRFServer extends baseServer {
+export class VOPRFServer extends baseServer implements Server<typeof Oprf.Mode.VOPRF> {
+    readonly modeID = Oprf.Mode.VOPRF
+
     constructor(suite: SuiteID, privateKey: Uint8Array) {
         super(Oprf.Mode.VOPRF, suite, privateKey)
     }
+
     async blindEvaluate(req: EvaluationRequest): Promise<Evaluation> {
         const evalList = await Promise.all(
             req.blinded.map((b) => this.doBlindEvaluation(b, this.privateKey))
@@ -111,20 +119,25 @@ export class VOPRFServer extends baseServer {
             [this.gg.generator(), pkS],
             zip(req.blinded, evalList)
         )
-        return new Evaluation(this.mode, evalList, proof)
+        return new Evaluation(this.modeID, evalList, proof)
     }
+
     async evaluate(input: Uint8Array): Promise<Uint8Array> {
         return this.doEvaluate(input)
     }
+
     async verifyFinalize(input: Uint8Array, output: Uint8Array): Promise<boolean> {
         return ctEqual(output, await this.doEvaluate(input))
     }
 }
 
-export class POPRFServer extends baseServer {
+export class POPRFServer extends baseServer implements Server<typeof Oprf.Mode.POPRF> {
+    readonly modeID = Oprf.Mode.POPRF
+
     constructor(suite: SuiteID, privateKey: Uint8Array) {
         super(Oprf.Mode.POPRF, suite, privateKey)
     }
+
     async blindEvaluate(req: EvaluationRequest, info = new Uint8Array(0)): Promise<Evaluation> {
         const [keyProof, evalSecret] = await this.secretFromInfo(info)
         const secret = evalSecret.serialize()
@@ -138,11 +151,13 @@ export class POPRFServer extends baseServer {
             [this.gg.generator(), kG],
             zip(evalList, req.blinded)
         )
-        return new Evaluation(this.mode, evalList, proof)
+        return new Evaluation(this.modeID, evalList, proof)
     }
+
     async evaluate(input: Uint8Array, info = new Uint8Array(0)): Promise<Uint8Array> {
         return this.doEvaluate(input, info)
     }
+
     async verifyFinalize(
         input: Uint8Array,
         output: Uint8Array,

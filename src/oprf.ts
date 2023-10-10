@@ -110,21 +110,21 @@ export abstract class Oprf {
         ])
     }
 
-    readonly mode: ModeID
-    readonly ID: SuiteID
+    readonly modeID: ModeID
+    readonly suiteID: SuiteID
     readonly gg: Group
     readonly hashID: HashID
 
     constructor(mode: ModeID, suite: SuiteID) {
         const [ID, gid, hash] = getOprfParams(suite)
-        this.ID = ID
+        this.suiteID = ID
         this.gg = CryptoImpl.Group.fromID(gid)
         this.hashID = hash
-        this.mode = Oprf.validateMode(mode)
+        this.modeID = Oprf.validateMode(mode)
     }
 
     protected getDST(name: string): Uint8Array {
-        return Oprf.getDST(this.mode, this.ID, name)
+        return Oprf.getDST(this.modeID, this.suiteID, name)
     }
 
     protected async coreFinalize(
@@ -133,7 +133,7 @@ export abstract class Oprf {
         info: Uint8Array
     ): Promise<Uint8Array> {
         let hasInfo: Uint8Array[] = []
-        if (this.mode === Oprf.Mode.POPRF) {
+        if (this.modeID === Oprf.Mode.POPRF) {
             hasInfo = toU16LenPrefix(info)
         }
 
