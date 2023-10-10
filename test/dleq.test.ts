@@ -9,7 +9,8 @@ import {
     type Scalar,
     DLEQProof,
     DLEQProver,
-    Oprf
+    Oprf,
+    DLEQVerifier
 } from '../src/index.js'
 import { describeGroupTests } from './describeGroupTests.js'
 import { serdeClass } from './util.js'
@@ -18,13 +19,15 @@ describeGroupTests((g) => {
     describe.each(g.supportedGroups)('DLEQ', (id) => {
         const groupName = id
         const gg = Oprf.Crypto.Group.fromID(id)
+        const te = new TextEncoder()
         const params: DLEQParams = {
-            gg,
+            group: gg,
             hash: Oprf.Crypto.hash,
             hashID: 'SHA-256',
-            dst: 'domain-sep'
+            dst: te.encode('domain-sep')
         }
         const Peggy = new DLEQProver(params)
+        const Victor = new DLEQVerifier(params)
 
         let k: Scalar
         let P: Elt
@@ -54,30 +57,30 @@ describeGroupTests((g) => {
             })
 
             it(`prove-single/${i}`, async () => {
-                expect(await proof.verify([P, kP], [Q, kQ])).toBe(true)
+                expect(await Victor.verify([P, kP], [Q, kQ], proof)).toBe(true)
             })
 
             it(`prove-batch/${i}`, async () => {
-                expect(await proofBatched.verify_batch([P, kP], list)).toBe(true)
+                expect(await Victor.verify_batch([P, kP], list, proofBatched)).toBe(true)
             })
 
             it(`invalid-arguments/${i}`, async () => {
-                expect(await proof.verify([kP, P], [Q, kQ])).toBe(false)
+                expect(await Victor.verify([kP, P], [Q, kQ], proof)).toBe(false)
             })
 
             it(`invalid-proof/${i}`, async () => {
-                expect(await proof.verify([kP, P], [Q, kQ])).toBe(false)
+                expect(await Victor.verify([kP, P], [Q, kQ], proof)).toBe(false)
             })
 
             it(`bad-key/${i}`, async () => {
                 const badKey = await gg.randomScalar()
                 const badProof: DLEQProof = await Peggy.prove(badKey, [P, kP], [Q, kQ])
-                expect(await badProof.verify([P, kP], [Q, kQ])).toBe(false)
+                expect(await Victor.verify([P, kP], [Q, kQ], badProof)).toBe(false)
             })
 
             it(`serde/${i}`, async () => {
-                expect(serdeClass(DLEQProof, proof, params)).toBe(true)
-                expect(serdeClass(DLEQProof, proofBatched, params)).toBe(true)
+                expect(serdeClass(DLEQProof, proof, gg)).toBe(true)
+                expect(serdeClass(DLEQProof, proofBatched, gg)).toBe(true)
             })
         })
     })

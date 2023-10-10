@@ -15,7 +15,8 @@ import {
     POPRFServer,
     type SuiteID,
     VOPRFClient,
-    VOPRFServer
+    VOPRFServer,
+    DLEQProver
 } from '../src/index.js'
 import { describeGroupTests } from './describeGroupTests.js'
 
@@ -74,10 +75,35 @@ class wrapPOPRFClient extends POPRFClient {
     }
 }
 
+type SingleVector = {
+    Batch: number
+    Blind: string
+    BlindedElement: string
+    EvaluationElement: string
+    Info?: string
+    Input: string
+    Output: string
+    Proof?: {
+        proof: string
+        r: string
+    }
+}
+
+type TestVector = {
+    groupDST: string
+    hash: string
+    identifier: string
+    keyInfo: string
+    mode: number
+    seed: string
+    skSm: string
+    vectors: SingleVector[]
+}
+
 describeGroupTests((g) => {
     // Test vectors from https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf
     // https://tools.ietf.org/html/draft-irtf-cfrg-voprf-11
-    describe.each(allVectors)('test-vectors', (testVector: (typeof allVectors)[number]) => {
+    describe.each(allVectors)('test-vectors', (testVector: TestVector) => {
         const mode = testVector.mode as ModeID
         const txtMode = Object.entries(Oprf.Mode)[mode as number][0]
 
@@ -117,22 +143,30 @@ describeGroupTests((g) => {
                 expect(toHex(skSm)).toBe(testVector.skSm)
             })
 
-            const { vectors } = testVector
-
-            describe.each(vectors)('vec$#', (vi: (typeof vectors)[number]) => {
+            describe.each(testVector.vectors)('vec$#', (vi: SingleVector) => {
                 it('protocol', async () => {
+                    const group = Oprf.getGroup(id)
+
                     // Creates a mock for randomBlinder method to
                     // inject the blind value given by the test vector.
-                    for (const c of [OPRFClient, VOPRFClient, wrapPOPRFClient]) {
-                        let i = 0
-                        jest.spyOn(c.prototype, 'randomBlinder').mockImplementation(() => {
-                            const group = Oprf.getGroup(id)
-                            return Promise.resolve(group.desScalar(fromHexList(vi.Blind)[i++]))
-                        })
+                    const scList = fromHexList(vi.Blind)
+                    expect(scList.length).toBe(vi.Batch)
+
+                    const rB = jest.spyOn(client, 'randomBlinder')
+                    for (const sc of scList) {
+                        rB.mockResolvedValueOnce(group.desScalar(sc))
                     }
 
-                    if (testVector.mode === Oprf.Mode.POPRF) {
-                        const info = fromHex((vi as any).Info as string) // eslint-disable-line @typescript-eslint/no-explicit-any
+                    // Creates a mock for DLEQProver.randomScalar method to
+                    // inject the random value used to generate a DLEQProof.
+                    if (vi.Proof) {
+                        jest.spyOn(DLEQProver.prototype, 'randomScalar').mockResolvedValueOnce(
+                            group.desScalar(fromHex(vi.Proof.r))
+                        )
+                    }
+
+                    if (testVector.mode === Oprf.Mode.POPRF && vi.Info) {
+                        const info = fromHex(vi.Info)
                         ;(server as wrapPOPRFServer).info = info
                         ;(client as wrapPOPRFClient).info = info
                     }
@@ -144,6 +178,9 @@ describeGroupTests((g) => {
 
                     const ev = await server.blindEvaluate(evalReq)
                     expect(toHexListClass(ev.evaluated)).toEqual(vi.EvaluationElement)
+                    expect(ev.proof && toHexListClass([ev.proof])).toEqual(
+                        vi.Proof && vi.Proof.proof
+                    )
 
                     const output = await client.finalize(finData, ev)
                     expect(toHexListUint8Array(output)).toEqual(vi.Output)

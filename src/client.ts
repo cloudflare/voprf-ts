@@ -3,6 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
+import { DLEQVerifier } from './dleq.js'
 import type { Elt, Scalar } from './groupTypes.js'
 import {
     Evaluation,
@@ -12,7 +13,6 @@ import {
     Oprf,
     type SuiteID
 } from './oprf.js'
-
 import { zip } from './util.js'
 
 class baseClient extends Oprf {
@@ -93,10 +93,12 @@ export class VOPRFClient extends baseClient {
             throw new Error('mismatched lengths')
         }
 
+        const verifier = new DLEQVerifier(this.getDLEQParams())
         if (
-            !(await evaluation.proof.verify_batch(
+            !(await verifier.verify_batch(
                 [this.gg.generator(), pkS],
-                zip(finData.evalReq.blinded, evaluation.evaluated)
+                zip(finData.evalReq.blinded, evaluation.evaluated),
+                evaluation.proof
             ))
         ) {
             throw new Error('proof failed')
@@ -139,10 +141,12 @@ export class POPRFClient extends baseClient {
             throw new Error('mismatched lengths')
         }
 
+        const verifier = new DLEQVerifier(this.getDLEQParams())
         if (
-            !(await evaluation.proof.verify_batch(
+            !(await verifier.verify_batch(
                 [this.gg.generator(), tw],
-                zip(evaluation.evaluated, finData.evalReq.blinded)
+                zip(evaluation.evaluated, finData.evalReq.blinded),
+                evaluation.proof
             ))
         ) {
             throw new Error('proof failed')
