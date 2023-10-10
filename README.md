@@ -74,48 +74,9 @@ Finally, the client can produce the output[s] of the OPRF protocol using the ser
 const [output] = await client.finalize(finData, evaluation);
 ```
 
-### Integrating the @noble CryptoProvider for Enhanced Performance and Support
+### Facade API 
 
-This library exposes the `@cloudflare/voprf-ts/crypto-noble` cryptographic provider. The advantages include:
-
-- Improved performance benchmarks.
-- Extended support for the Ristretto and Decaf elliptic curve groups:
-  ```js
-  Oprf.Suite.RISTRETTO255_SHA512
-  Oprf.Suite.DECAF448_SHAKE256
-  ```
-
-However, users should note the following:
-
-- Arithmetic operations in the `@noble/curves` library leverage native JavaScript's `BigInt`. 
-  - These operations inherently operate in non-constant time. 
-  - However, noble libraries DO take care to employ constant time (CT) algorithms.
-  - In the interest of fairness, it must be noted that `sjcl` is also not perfectly CT either. 
-  - As always, **users are encouraged to understand the implications of their chosen cryptographic provider** fully.
-  - This is a community contribution and Cloudflare is still researching a perfectly CT JavaScript BN implementation
-
-- To incorporate the `CryptoNoble` provider, it is necessary to first install some optional dependencies: `@noble/curves` and `@noble/hashes`.
-
-Dependencies can be installed with the following command:
-
-```bash
-npm install @noble/curves @noble/hashes
-```
-
-Upon successful installation, the provider can be utilized as illustrated below:
-
-```javascript
-import { CryptoImpl } from '@cloudflare/voprf-ts';
-import { CryptoNoble } from '@cloudflare/voprf-ts/crypto-noble';
-
-// Ensure you understand the BigInt nuances related to your specific use case!
-CryptoImpl.provider = CryptoNoble;
-
-console.log(CryptoImpl.Group.supportedGroups);
-// Expected output: [ 'ristretto255', 'decaf448', 'P-256', 'P-384', 'P-521' ]
-
-// Proceed with the library usage as intended.
-```
+TODO: 
 
 ### Development
 
