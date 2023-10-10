@@ -7,15 +7,18 @@ import { oprfExample } from './oprf.js'
 import { poprfExample } from './poprf.js'
 import { voprfExample } from './voprf.js'
 import { webcrypto } from 'node:crypto'
+import { DEFAULT_CRYPTO_PROVIDER } from '../src/cryptoImpl.js'
 
 if (typeof crypto === 'undefined') {
     global.crypto = webcrypto as unknown as Crypto
 }
 
 async function examples() {
-    await oprfExample()
-    await voprfExample()
-    await poprfExample()
+    const provider = DEFAULT_CRYPTO_PROVIDER
+
+    await oprfExample(provider)
+    await voprfExample(provider)
+    await poprfExample(provider)
 }
 
 examples().catch((e: Error) => {

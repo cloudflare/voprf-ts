@@ -8,18 +8,19 @@ import {
     POPRFClient,
     POPRFServer,
     generatePublicKey,
-    randomPrivateKey
+    randomPrivateKey,
+    type CryptoProvider
 } from '../src/index.js'
 
 // Example: POPRF mode with the P256_SHA256 suite.
-export async function poprfExample() {
+export async function poprfExample(provider: CryptoProvider) {
     // Setup: Create client and server.
     const suite = Oprf.Suite.P256_SHA256
-    const privateKey = await randomPrivateKey(suite)
-    const publicKey = generatePublicKey(suite, privateKey)
+    const privateKey = await randomPrivateKey(suite, provider)
+    const publicKey = generatePublicKey(suite, privateKey, provider)
 
-    const server = new POPRFServer(suite, privateKey)
-    const client = new POPRFClient(suite, publicKey)
+    const server = new POPRFServer(suite, privateKey, provider)
+    const client = new POPRFClient(suite, publicKey, provider)
 
     // Client                                       Server
     // ====================================================

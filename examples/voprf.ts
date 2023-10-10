@@ -8,18 +8,19 @@ import {
     VOPRFClient,
     VOPRFServer,
     generatePublicKey,
-    randomPrivateKey
+    randomPrivateKey,
+    type CryptoProvider
 } from '../src/index.js'
 
 // Example: VOPRF mode with the P384-SHA384 suite.
-export async function voprfExample() {
+export async function voprfExample(provider: CryptoProvider) {
     // Setup: Create client and server.
     const suite = Oprf.Suite.P384_SHA384
-    const privateKey = await randomPrivateKey(suite)
-    const publicKey = generatePublicKey(suite, privateKey)
+    const privateKey = await randomPrivateKey(suite, provider)
+    const publicKey = generatePublicKey(suite, privateKey, provider)
 
-    const server = new VOPRFServer(suite, privateKey)
-    const client = new VOPRFClient(suite, publicKey)
+    const server = new VOPRFServer(suite, privateKey, provider)
+    const client = new VOPRFClient(suite, publicKey, provider)
 
     // Client                                       Server
     // ====================================================

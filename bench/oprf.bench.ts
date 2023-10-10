@@ -29,30 +29,30 @@ function asyncFn(call: CallableFunction) {
     }
 }
 
-export async function benchOPRF(crypto: CryptoProvider, bs: Benchmark.Suite) {
+export async function benchOPRF(provider: CryptoProvider, bs: Benchmark.Suite) {
     const te = new TextEncoder()
     const input = te.encode('This is the client input')
 
     for (const [mode, m] of Object.entries(Oprf.Mode)) {
-        for (const id of getSupportedSuites(crypto.Group)) {
-            const privateKey = await randomPrivateKey(id, crypto)
-            const publicKey = generatePublicKey(id, privateKey, crypto)
+        for (const id of getSupportedSuites(provider.Group)) {
+            const privateKey = await randomPrivateKey(id, provider)
+            const publicKey = generatePublicKey(id, privateKey, provider)
             let server: OPRFServer | VOPRFServer | POPRFServer
             let client: OPRFClient | VOPRFClient | POPRFClient
 
             switch (m) {
                 case Oprf.Mode.OPRF:
-                    server = new OPRFServer(id, privateKey, crypto)
-                    client = new OPRFClient(id, crypto)
+                    server = new OPRFServer(id, privateKey, provider)
+                    client = new OPRFClient(id, provider)
                     break
 
                 case Oprf.Mode.VOPRF:
-                    server = new VOPRFServer(id, privateKey, crypto)
-                    client = new VOPRFClient(id, publicKey, crypto)
+                    server = new VOPRFServer(id, privateKey, provider)
+                    client = new VOPRFClient(id, publicKey, provider)
                     break
                 case Oprf.Mode.POPRF:
-                    server = new POPRFServer(id, privateKey, crypto)
-                    client = new POPRFClient(id, publicKey, crypto)
+                    server = new POPRFServer(id, privateKey, provider)
+                    client = new POPRFClient(id, publicKey, provider)
                     break
             }
 

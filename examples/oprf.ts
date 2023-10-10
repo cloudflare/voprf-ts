@@ -3,16 +3,22 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { OPRFClient, OPRFServer, Oprf, randomPrivateKey } from '../src/index.js'
+import {
+    OPRFClient,
+    OPRFServer,
+    Oprf,
+    randomPrivateKey,
+    type CryptoProvider
+} from '../src/index.js'
 
 // Example: OPRF mode with the P521-SHA512 suite.
-export async function oprfExample() {
+export async function oprfExample(provider: CryptoProvider) {
     // Setup: Create client and server.
     const suite = Oprf.Suite.P521_SHA512
-    const privateKey = await randomPrivateKey(suite)
+    const privateKey = await randomPrivateKey(suite, provider)
 
-    const server = new OPRFServer(suite, privateKey)
-    const client = new OPRFClient(suite)
+    const server = new OPRFServer(suite, privateKey, provider)
+    const client = new OPRFClient(suite, provider)
 
     // Client                                       Server
     // ====================================================

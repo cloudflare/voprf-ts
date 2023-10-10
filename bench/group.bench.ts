@@ -16,13 +16,13 @@ function asyncFn(call: CallableFunction) {
     }
 }
 
-export async function benchGroup(crypto: CryptoProvider, bs: Benchmark.Suite) {
+export async function benchGroup(provider: CryptoProvider, bs: Benchmark.Suite) {
     const te = new TextEncoder()
     const msg = te.encode('msg')
     const dst = te.encode('dst')
 
-    for (const id of crypto.Group.supportedGroups) {
-        const gg = crypto.Group.fromID(id)
+    for (const id of provider.Group.supportedGroups) {
+        const gg = provider.Group.fromID(id)
         const k = await gg.randomScalar()
         const P = gg.mulGen(k)
         const Q = P.mul(k)
