@@ -14,8 +14,8 @@ import {
 import { describeCryptoTests } from './describeCryptoTests.js'
 import { serdeClass } from './util.js'
 
-describeCryptoTests((Group) => {
-    describe.each(Group.supportedGroups)('DLEQ', (id) => {
+describeCryptoTests(({ supportedGroups }) => {
+    describe.each(supportedGroups)('DLEQ', (id) => {
         const groupName = id
         const gg = CryptoImpl.Group.fromID(id)
         const params: DLEQParams = {

@@ -8,7 +8,6 @@ import {
     EvaluationRequest,
     FinalizeData,
     generatePublicKey,
-    getSupportedSuites,
     Oprf,
     OPRFClient,
     OPRFServer,
@@ -34,9 +33,9 @@ async function testBadProof(
     await expect(client.finalize(finData, badEval)).rejects.toThrow(/proof failed/)
 }
 
-describeCryptoTests((Group) => {
+describeCryptoTests(({ supportedSuites }) => {
     describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
-        describe.each(getSupportedSuites(Group))(`${modeName}`, (id) => {
+        describe.each(supportedSuites)(`${modeName}`, (id) => {
             let server: OPRFServer | VOPRFServer | POPRFServer
             let client: OPRFClient | VOPRFClient | POPRFClient
 

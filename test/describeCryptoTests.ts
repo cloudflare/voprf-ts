@@ -1,5 +1,5 @@
 import { CryptoNoble } from '../src/cryptoNoble.js'
-import { type GroupCons } from '../src/index.js'
+import { getSupportedSuites, type GroupID, type SuiteID } from '../src/index.js'
 import { CryptoSjcl } from '../src/cryptoSjcl.js'
 import { CryptoImpl } from '../src/cryptoImpl.js'
 
@@ -9,8 +9,10 @@ export const testProviders = allProviders
     .filter((provider) => !cryptoProviderMatch || provider.name === cryptoProviderMatch)
     .map((p) => [p.name, p] as const)
 
-export function describeCryptoTests(declare: (group: GroupCons) => void) {
-    describe.each(testProviders)(`CryptoProvider(name=%s)`, (_, provider) => {
+export function describeCryptoTests(
+    declare: (args: { supportedSuites: SuiteID[]; supportedGroups: GroupID[] }) => void
+) {
+    describe.each(testProviders)(`CryptoProvider({name='%s'})`, (_, provider) => {
         // Will run before other beforeAll hooks (see vectors.test.ts)
         beforeAll(() => {
             CryptoImpl.provider = provider
@@ -20,6 +22,9 @@ export function describeCryptoTests(declare: (group: GroupCons) => void) {
             CryptoImpl.provider = provider
         })
         CryptoImpl.provider = provider
-        declare(provider.Group)
+        declare({
+            supportedSuites: getSupportedSuites(provider.Group),
+            supportedGroups: provider.Group.supportedGroups
+        })
     })
 }

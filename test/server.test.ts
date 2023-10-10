@@ -5,14 +5,7 @@
 
 import { jest } from '@jest/globals'
 
-import {
-    getSupportedSuites,
-    type GroupID,
-    CryptoImpl,
-    OPRFClient,
-    OPRFServer,
-    randomPrivateKey
-} from '../src/index.js'
+import { type GroupID, CryptoImpl, OPRFClient, OPRFServer, randomPrivateKey } from '../src/index.js'
 import { describeCryptoTests } from './describeCryptoTests.js'
 
 const { sign, importKey } = crypto.subtle
@@ -52,8 +45,8 @@ function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
     throw new Error('bad algorithm')
 }
 
-describeCryptoTests((Group) => {
-    describe.each(getSupportedSuites(Group))('supportsWebCrypto', (id) => {
+describeCryptoTests(({ supportedSuites }) => {
+    describe.each(supportedSuites)('supportsWebCrypto', (id) => {
         beforeAll(() => {
             jest.spyOn(crypto.subtle, 'importKey').mockImplementation(mockImportKey)
             jest.spyOn(crypto.subtle, 'sign').mockImplementation(mockSign)

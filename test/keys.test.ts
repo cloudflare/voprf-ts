@@ -7,15 +7,14 @@ import {
     deriveKeyPair,
     generateKeyPair,
     getKeySizes,
-    getSupportedSuites,
     Oprf,
     validatePrivateKey,
     validatePublicKey
 } from '../src/index.js'
 import { describeCryptoTests } from './describeCryptoTests.js'
 
-describeCryptoTests((Group) => {
-    describe.each(getSupportedSuites(Group))('oprf-keys', (id) => {
+describeCryptoTests(({ supportedSuites }) => {
+    describe.each(supportedSuites)('oprf-keys', (id) => {
         describe(`${id}`, () => {
             const { Nsk, Npk } = getKeySizes(id)
             const gg = Oprf.getGroup(id)
