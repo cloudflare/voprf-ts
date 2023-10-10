@@ -12,7 +12,7 @@ export const testProviders = allProviders
 export function describeCryptoTests(
     declare: (args: { supportedSuites: SuiteID[]; supportedGroups: GroupID[] }) => void
 ) {
-    describe.each(testProviders)(`CryptoProvider({name='%s'})`, (_, provider) => {
+    describe.each(testProviders)(`CryptoProvider({name: '%s'})`, (_, provider) => {
         // Will run before other beforeAll hooks (see vectors.test.ts)
         beforeAll(() => {
             CryptoImpl.provider = provider
