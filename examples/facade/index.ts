@@ -3,8 +3,6 @@ import { webcrypto } from 'node:crypto'
 import type { OprfApi } from '../../src/facade/types.js'
 import { Oprf } from '../../src/facade/impl.js'
 import { CryptoNoble } from '../../src/cryptoNoble.js'
-// noinspection ES6PreferShortImport
-import { CryptoImpl } from '../../src/cryptoImpl.js'
 
 export async function facadeOprfExample(Oprf: OprfApi) {
     // Setup: Create client and server.
@@ -136,14 +134,9 @@ async function main() {
     if (typeof crypto === 'undefined') {
         Object.assign(global, { crypto: webcrypto })
     }
-    delete (CryptoImpl as { provider: unknown })['provider']
-
-
     await facadeOprfExample(Oprf)
     await facadeVoprfExample(Oprf)
-
     const OprfNoble = Oprf.withConfig({ crypto: CryptoNoble })
-    delete (CryptoImpl as { provider: unknown })['provider']
 
     await facadePoprfExample(Oprf)
     await facadePoprfExample(OprfNoble)

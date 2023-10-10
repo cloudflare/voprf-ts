@@ -3,20 +3,17 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { type ModeID, type SuiteID, Oprf, getOprfParams } from './oprf.js'
+import { getOprfParams, type ModeID, Oprf, type SuiteID } from './oprf.js'
 import { joinAll, toU16LenPrefix } from './util.js'
 import { type Scalar } from './groupTypes.js'
 import type { CryptoProvider } from './cryptoTypes.js'
-import { CryptoImpl } from './cryptoImpl.js'
 
+// TODO:
 function getGroup(suite: SuiteID, crypto: CryptoProvider) {
     return crypto.Group.fromID(getOprfParams(suite)[1])
 }
 
-export function getKeySizes(
-    id: SuiteID,
-    crypto = CryptoImpl.provider
-): { Nsk: number; Npk: number } {
+export function getKeySizes(id: SuiteID, crypto: CryptoProvider): { Nsk: number; Npk: number } {
     const gg = getGroup(id, crypto)
     return { Nsk: gg.scalarSize(), Npk: gg.eltSize(true) }
 }
@@ -24,7 +21,7 @@ export function getKeySizes(
 export function validatePrivateKey(
     id: SuiteID,
     privateKey: Uint8Array,
-    crypto = CryptoImpl.provider
+    crypto: CryptoProvider
 ): boolean {
     try {
         const group = getGroup(id, crypto)
@@ -38,7 +35,7 @@ export function validatePrivateKey(
 export function validatePublicKey(
     id: SuiteID,
     publicKey: Uint8Array,
-    crypto = CryptoImpl.provider
+    crypto: CryptoProvider
 ): boolean {
     try {
         const group = getGroup(id, crypto)
@@ -49,10 +46,7 @@ export function validatePublicKey(
     }
 }
 
-export async function randomPrivateKey(
-    id: SuiteID,
-    crypto: CryptoProvider = CryptoImpl
-): Promise<Uint8Array> {
+export async function randomPrivateKey(id: SuiteID, crypto: CryptoProvider): Promise<Uint8Array> {
     let priv: Scalar
     do {
         const gg = getGroup(id, crypto)
@@ -67,7 +61,7 @@ export async function derivePrivateKey(
     id: SuiteID,
     seed: Uint8Array,
     info: Uint8Array,
-    crypto: CryptoProvider = CryptoImpl
+    crypto: CryptoProvider
 ): Promise<Uint8Array> {
     const gg = getGroup(id, crypto)
     const deriveInput = joinAll([seed, ...toU16LenPrefix(info)])
@@ -89,7 +83,7 @@ export async function derivePrivateKey(
 export function generatePublicKey(
     id: SuiteID,
     privateKey: Uint8Array,
-    crypto: CryptoProvider = CryptoImpl
+    crypto: CryptoProvider
 ): Uint8Array {
     const gg = getGroup(id, crypto)
     const priv = gg.desScalar(privateKey)
@@ -99,10 +93,10 @@ export function generatePublicKey(
 
 export async function generateKeyPair(
     id: SuiteID,
-    crypto: CryptoProvider = CryptoImpl
+    crypto: CryptoProvider
 ): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array }> {
     const privateKey = await randomPrivateKey(id, crypto)
-    const publicKey = generatePublicKey(id, privateKey)
+    const publicKey = generatePublicKey(id, privateKey, crypto)
     return { privateKey, publicKey }
 }
 
@@ -111,9 +105,9 @@ export async function deriveKeyPair(
     id: SuiteID,
     seed: Uint8Array,
     info: Uint8Array,
-    crypto: CryptoProvider = CryptoImpl
+    crypto: CryptoProvider
 ): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array }> {
     const privateKey = await derivePrivateKey(mode, id, seed, info, crypto)
-    const publicKey = generatePublicKey(id, privateKey)
+    const publicKey = generatePublicKey(id, privateKey, crypto)
     return { privateKey, publicKey }
 }

@@ -72,7 +72,7 @@ class ModeImpl implements Mode {
     }
 
     getKeySizes(): KeySizes {
-        const internal = getKeySizes(this.suiteID)
+        const internal = getKeySizes(this.suiteID, this.crypto)
         return { publicKey: internal.Npk, privateKey: internal.Nsk }
     }
 

@@ -10,18 +10,16 @@ import { benchGroup } from './group.bench.js'
 import { benchOPRF } from './oprf.bench.js'
 import { getCryptoProviders } from './testProviders.js'
 
-import { CryptoImpl, type CryptoProvider } from '../src/index.js'
+import { type CryptoProvider } from '../src/index.js'
 
 if (typeof crypto === 'undefined') {
     Object.assign(global, { crypto: webcrypto })
 }
 
 async function bench(provider: CryptoProvider) {
-    CryptoImpl.provider = provider
-
     const bs = new Benchmark.Suite()
-    await benchOPRF(bs)
-    await benchGroup(bs)
+    await benchOPRF(provider, bs)
+    await benchGroup(provider, bs)
 
     return new Promise<unknown>((resolve, reject) => {
         bs.on('cycle', (ev: Benchmark.Event) => {

@@ -3,23 +3,16 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import {
-    type DLEQParams,
-    type Elt,
-    type Scalar,
-    CryptoImpl,
-    DLEQProof,
-    DLEQProver
-} from '../src/index.js'
+import { type DLEQParams, type Elt, type Scalar, DLEQProof, DLEQProver } from '../src/index.js'
 import { describeCryptoTests } from './describeCryptoTests.js'
 import { serdeClass } from './util.js'
 
-describeCryptoTests(({ supportedGroups }) => {
+describeCryptoTests(({ cryptoProvider, supportedGroups }) => {
     describe.each(supportedGroups)('DLEQ', (id) => {
         const groupName = id
-        const gg = CryptoImpl.Group.fromID(id)
+        const gg = cryptoProvider.Group.fromID(id)
         const params: DLEQParams = {
-            crypto: CryptoImpl,
+            crypto: cryptoProvider,
             gg,
             hashID: 'SHA-256',
             dst: 'domain-sep'

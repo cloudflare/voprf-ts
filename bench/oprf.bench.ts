@@ -4,17 +4,17 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import {
+    type CryptoProvider,
+    generatePublicKey,
+    getSupportedSuites,
+    Oprf,
     OPRFClient,
     OPRFServer,
-    Oprf,
-    CryptoImpl,
     POPRFClient,
     POPRFServer,
-    VOPRFClient,
-    VOPRFServer,
-    generatePublicKey,
     randomPrivateKey,
-    getSupportedSuites
+    VOPRFClient,
+    VOPRFServer
 } from '../src/index.js'
 
 import Benchmark from 'benchmark'
@@ -29,30 +29,30 @@ function asyncFn(call: CallableFunction) {
     }
 }
 
-export async function benchOPRF(bs: Benchmark.Suite) {
+export async function benchOPRF(crypto: CryptoProvider, bs: Benchmark.Suite) {
     const te = new TextEncoder()
     const input = te.encode('This is the client input')
 
     for (const [mode, m] of Object.entries(Oprf.Mode)) {
-        for (const id of getSupportedSuites(CryptoImpl.Group)) {
-            const privateKey = await randomPrivateKey(id)
-            const publicKey = generatePublicKey(id, privateKey)
+        for (const id of getSupportedSuites(crypto.Group)) {
+            const privateKey = await randomPrivateKey(id, crypto)
+            const publicKey = generatePublicKey(id, privateKey, crypto)
             let server: OPRFServer | VOPRFServer | POPRFServer
             let client: OPRFClient | VOPRFClient | POPRFClient
 
             switch (m) {
                 case Oprf.Mode.OPRF:
-                    server = new OPRFServer(id, privateKey)
-                    client = new OPRFClient(id)
+                    server = new OPRFServer(id, privateKey, crypto)
+                    client = new OPRFClient(id, crypto)
                     break
 
                 case Oprf.Mode.VOPRF:
-                    server = new VOPRFServer(id, privateKey)
-                    client = new VOPRFClient(id, publicKey)
+                    server = new VOPRFServer(id, privateKey, crypto)
+                    client = new VOPRFClient(id, publicKey, crypto)
                     break
                 case Oprf.Mode.POPRF:
-                    server = new POPRFServer(id, privateKey)
-                    client = new POPRFClient(id, publicKey)
+                    server = new POPRFServer(id, privateKey, crypto)
+                    client = new POPRFClient(id, publicKey, crypto)
                     break
             }
 

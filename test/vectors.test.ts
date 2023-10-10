@@ -6,6 +6,7 @@
 import {
     derivePrivateKey,
     generatePublicKey,
+    getOprfParams,
     type ModeID,
     Oprf,
     OPRFClient,
@@ -44,7 +45,7 @@ function toHexListClass(x: { serialize(): Uint8Array }[]): string {
     return toHexListUint8Array(x.map((xi) => xi.serialize()))
 }
 
-describeCryptoTests(({ supportedSuites: supported }) => {
+describeCryptoTests(({ cryptoProvider, supportedSuites: supported }) => {
     // Test vectors from https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf
     // https://tools.ietf.org/html/draft-irtf-cfrg-voprf-11
     describe.each(allVectors)('test-vectors', (testVector: (typeof allVectors)[number]) => {
@@ -62,22 +63,22 @@ describeCryptoTests(({ supportedSuites: supported }) => {
             beforeAll(async () => {
                 const seed = fromHex(testVector.seed)
                 const keyInfo = fromHex(testVector.keyInfo)
-                skSm = await derivePrivateKey(mode, id, seed, keyInfo)
-                const pkSm = generatePublicKey(id, skSm)
+                skSm = await derivePrivateKey(mode, id, seed, keyInfo, cryptoProvider)
+                const pkSm = generatePublicKey(id, skSm, cryptoProvider)
                 switch (mode) {
                     case Oprf.Mode.OPRF:
-                        server = new OPRFServer(id, skSm)
-                        client = new OPRFClient(id)
+                        server = new OPRFServer(id, skSm, cryptoProvider)
+                        client = new OPRFClient(id, cryptoProvider)
                         break
 
                     case Oprf.Mode.VOPRF:
-                        server = new VOPRFServer(id, skSm)
-                        client = new VOPRFClient(id, pkSm)
+                        server = new VOPRFServer(id, skSm, cryptoProvider)
+                        client = new VOPRFClient(id, pkSm, cryptoProvider)
                         break
 
                     case Oprf.Mode.POPRF:
-                        server = new POPRFServer(id, skSm)
-                        client = new POPRFClient(id, pkSm)
+                        server = new POPRFServer(id, skSm, cryptoProvider)
+                        client = new POPRFClient(id, pkSm, cryptoProvider)
                         break
                 }
             })
@@ -95,7 +96,7 @@ describeCryptoTests(({ supportedSuites: supported }) => {
                     for (const c of [OPRFClient, VOPRFClient, POPRFClient]) {
                         let i = 0
                         jest.spyOn(c.prototype, 'randomBlinder').mockImplementation(() => {
-                            const group = Oprf.getGroup(id)
+                            const group = cryptoProvider.Group.fromID(getOprfParams(id)[1])
                             return Promise.resolve(group.desScalar(fromHexList(vi.Blind)[i++]))
                         })
                     }

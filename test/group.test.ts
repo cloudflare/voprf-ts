@@ -5,11 +5,10 @@
 
 import { describeCryptoTests } from './describeCryptoTests.js'
 import { serdesEquals } from './util.js'
-import { CryptoImpl } from '../src/index.js'
 
-describeCryptoTests(({ supportedGroups }) => {
+describeCryptoTests(({ cryptoProvider, supportedGroups }) => {
     describe.each(supportedGroups)('%s', (id) => {
-        const gg = CryptoImpl.Group.fromID(id)
+        const gg = cryptoProvider.Group.fromID(id)
 
         it('serdeElement', async () => {
             const P = gg.mulGen(await gg.randomScalar())

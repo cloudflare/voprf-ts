@@ -15,7 +15,7 @@ class baseServer extends Oprf {
 
     public supportsWebCryptoOPRF = false
 
-    constructor(mode: ModeID, suite: SuiteID, privateKey: Uint8Array, crypto?: CryptoProvider) {
+    constructor(mode: ModeID, suite: SuiteID, privateKey: Uint8Array, crypto: CryptoProvider) {
         super(mode, suite, crypto)
         this.privateKey = privateKey
     }
@@ -81,7 +81,7 @@ class baseServer extends Oprf {
 export class OPRFServer extends baseServer implements Server<typeof Oprf.Mode.OPRF> {
     readonly modeID = Oprf.Mode.OPRF
 
-    constructor(suite: SuiteID, privateKey: Uint8Array, crypto?: CryptoProvider) {
+    constructor(suite: SuiteID, privateKey: Uint8Array, crypto: CryptoProvider) {
         super(Oprf.Mode.OPRF, suite, privateKey, crypto)
     }
 
@@ -104,7 +104,7 @@ export class OPRFServer extends baseServer implements Server<typeof Oprf.Mode.OP
 export class VOPRFServer extends baseServer implements Server<typeof Oprf.Mode.VOPRF> {
     readonly modeID = Oprf.Mode.VOPRF
 
-    constructor(suite: SuiteID, privateKey: Uint8Array, crypto?: CryptoProvider) {
+    constructor(suite: SuiteID, privateKey: Uint8Array, crypto: CryptoProvider) {
         super(Oprf.Mode.VOPRF, suite, privateKey, crypto)
     }
 
@@ -135,7 +135,7 @@ export class VOPRFServer extends baseServer implements Server<typeof Oprf.Mode.V
 export class POPRFServer extends baseServer implements Server<typeof Oprf.Mode.POPRF> {
     readonly modeID = Oprf.Mode.POPRF
 
-    constructor(suite: SuiteID, privateKey: Uint8Array, crypto?: CryptoProvider) {
+    constructor(suite: SuiteID, privateKey: Uint8Array, crypto: CryptoProvider) {
         super(Oprf.Mode.POPRF, suite, privateKey, crypto)
     }
 

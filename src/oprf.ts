@@ -22,7 +22,6 @@ import {
     toU16LenPrefixUint8Array
 } from './util.js'
 import type { CryptoProvider, HashID } from './cryptoTypes.js'
-import { CryptoImpl } from './cryptoImpl.js'
 
 export type ModeID = (typeof Oprf.Mode)[keyof typeof Oprf.Mode]
 export type SuiteID = (typeof Oprf.Suite)[keyof typeof Oprf.Suite]
@@ -88,10 +87,6 @@ export abstract class Oprf {
         }
     }
 
-    static getGroup(suite: SuiteID): Group {
-        return CryptoImpl.Group.fromID(getOprfParams(suite)[1])
-    }
-
     static getHash(suite: SuiteID): HashID {
         return getOprfParams(suite)[2]
     }
@@ -118,7 +113,7 @@ export abstract class Oprf {
     protected constructor(
         mode: ModeID,
         suite: SuiteID,
-        protected readonly crypto: CryptoProvider = CryptoImpl
+        protected readonly crypto: CryptoProvider
     ) {
         const [ID, gid, hash] = getOprfParams(suite)
         this.gg = this.crypto.Group.fromID(gid)

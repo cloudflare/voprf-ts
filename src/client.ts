@@ -18,7 +18,7 @@ import type { Client } from './facade/types.js'
 import type { CryptoProvider } from './cryptoTypes.js'
 
 class baseClient extends Oprf {
-    constructor(mode: ModeID, suite: SuiteID, crypto?: CryptoProvider) {
+    constructor(mode: ModeID, suite: SuiteID, crypto: CryptoProvider) {
         super(mode, suite, crypto)
     }
 
@@ -70,7 +70,7 @@ class baseClient extends Oprf {
 export class OPRFClient extends baseClient implements Client<typeof Oprf.Mode.OPRF> {
     readonly modeID = Oprf.Mode.OPRF
 
-    constructor(suite: SuiteID, crypto?: CryptoProvider) {
+    constructor(suite: SuiteID, crypto: CryptoProvider) {
         super(Oprf.Mode.OPRF, suite, crypto)
     }
 
@@ -85,7 +85,7 @@ export class VOPRFClient extends baseClient implements Client<typeof Oprf.Mode.V
     constructor(
         suite: SuiteID,
         private readonly pubKeyServer: Uint8Array,
-        crypto?: CryptoProvider
+        crypto: CryptoProvider
     ) {
         super(Oprf.Mode.VOPRF, suite, crypto)
     }
@@ -120,7 +120,7 @@ export class POPRFClient extends baseClient implements Client<typeof Oprf.Mode.P
     constructor(
         suite: SuiteID,
         private readonly pubKeyServer: Uint8Array,
-        crypto?: CryptoProvider
+        crypto: CryptoProvider
     ) {
         super(Oprf.Mode.POPRF, suite, crypto)
     }
