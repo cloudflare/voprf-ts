@@ -106,13 +106,6 @@ export abstract class Oprf {
         return getOprfParams(suite)[3]
     }
 
-    static getDLEQParams(suite: SuiteID): DLEQParams {
-        const EMPTY_DST = ''
-        const [, gid, hashID] = getOprfParams(suite)
-        const gg = Oprf.Group.fromID(gid)
-        return { gg, hashID, hash: Oprf.Crypto.hash, dst: EMPTY_DST }
-    }
-
     static getDST(mode: ModeID, suite: SuiteID, name: string): Uint8Array {
         const m = Oprf.validateMode(mode)
         const te = new TextEncoder()
@@ -137,7 +130,13 @@ export abstract class Oprf {
     }
 
     protected getDLEQParams(): DLEQParams {
-        return Oprf.getDLEQParams(this.ID)
+        const EMPTY_DST = ''
+        return {
+            group: this.gg,
+            hashID: this.hashID,
+            hash: Oprf.Crypto.hash,
+            dst: this.getDST(EMPTY_DST)
+        }
     }
 
     protected getDST(name: string): Uint8Array {
@@ -205,18 +204,18 @@ export class Evaluation {
     }
 
     static deserialize(suite: SuiteID, bytes: Uint8Array): Evaluation {
-        const params = Oprf.getDLEQParams(suite)
-        const { head: evalList, tail } = fromU16LenPrefixDes(params.gg.eltDes, bytes)
+        const group = Oprf.getGroup(suite)
+        const { head: evalList, tail } = fromU16LenPrefixDes(group.eltDes, bytes)
         let proof: DLEQProof | undefined
-        const prSize = DLEQProof.size(params)
-        const proofBytes = tail.subarray(1, 1 + prSize)
+        const proofSize = DLEQProof.size(group)
+        const proofBytes = tail.subarray(1, 1 + proofSize)
         const mode = tail[0]
         switch (mode) {
             case Oprf.Mode.OPRF: // no proof exists.
                 break
             case Oprf.Mode.VOPRF:
             case Oprf.Mode.POPRF:
-                proof = DLEQProof.deserialize(params, proofBytes)
+                proof = DLEQProof.deserialize(group, proofBytes)
                 break
             default:
                 assertNever('Oprf.Mode', mode)
