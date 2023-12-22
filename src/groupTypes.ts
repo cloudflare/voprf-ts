@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-export const Groups = {
+export const GROUP = {
     // P256_XMD:SHA-256_SSWU_RO_
     P256: 'P-256',
     // P384_XMD:SHA-384_SSWU_RO_
@@ -16,7 +16,7 @@ export const Groups = {
     DECAF448: 'decaf448'
 } as const
 
-export type GroupID = (typeof Groups)[keyof typeof Groups]
+export type GroupID = (typeof GROUP)[keyof typeof GROUP]
 
 export function errBadGroup(X: string) {
     return new Error(`group: bad group name ${X}.`)
@@ -98,6 +98,8 @@ export interface Group extends SerializationHelpers {
 }
 
 export interface GroupCons {
-    fromID(id: GroupID): Group
+    get(id: GroupID): Group
     supportedGroups: Array<GroupID>
 }
+
+export type GroupCache = Partial<Record<GroupID, Group>>

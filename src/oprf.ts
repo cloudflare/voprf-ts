@@ -5,8 +5,8 @@
 
 import { type DLEQParams, DLEQProof } from './dleq.js'
 import {
-    Groups,
     type Elt,
+    GROUP,
     type Group,
     type GroupCons,
     type GroupID,
@@ -22,7 +22,14 @@ import {
     toU16LenPrefixUint8Array
 } from './util.js'
 import type { CryptoProvider, HashID } from './cryptoTypes.js'
-import { CryptoSjcl } from './cryptoSjcl.js'
+import { LABELS, MODE, SUITE } from './consts.js'
+import {
+    type CryptoProviderArg,
+    getCrypto,
+    getSuiteGroup,
+    getCryptoProvider,
+    setCryptoProvider
+} from './cryptoImpl.js'
 
 export type ModeID = (typeof Oprf.Mode)[keyof typeof Oprf.Mode]
 export type SuiteID = (typeof Oprf.Suite)[keyof typeof Oprf.Suite]
@@ -31,18 +38,20 @@ function assertNever(name: string, x: unknown): never {
     throw new Error(`unexpected ${name} identifier: ${x}`)
 }
 
-function getOprfParams(id: string): readonly [SuiteID, GroupID, HashID, number] {
+export function getOprfParams(
+    id: string
+): readonly [suite: SuiteID, group: GroupID, hash: HashID, size: number] {
     switch (id) {
         case Oprf.Suite.P256_SHA256:
-            return [Oprf.Suite.P256_SHA256, Groups.P256, 'SHA-256', 32]
+            return [Oprf.Suite.P256_SHA256, GROUP.P256, 'SHA-256', 32]
         case Oprf.Suite.P384_SHA384:
-            return [Oprf.Suite.P384_SHA384, Groups.P384, 'SHA-384', 48]
+            return [Oprf.Suite.P384_SHA384, GROUP.P384, 'SHA-384', 48]
         case Oprf.Suite.P521_SHA512:
-            return [Oprf.Suite.P521_SHA512, Groups.P521, 'SHA-512', 64]
+            return [Oprf.Suite.P521_SHA512, GROUP.P521, 'SHA-512', 64]
         case Oprf.Suite.RISTRETTO255_SHA512:
-            return [Oprf.Suite.RISTRETTO255_SHA512, Groups.RISTRETTO255, 'SHA-512', 64]
+            return [Oprf.Suite.RISTRETTO255_SHA512, GROUP.RISTRETTO255, 'SHA-512', 64]
         case Oprf.Suite.DECAF448_SHAKE256:
-            return [Oprf.Suite.DECAF448_SHAKE256, Groups.DECAF448, 'SHAKE256', 64]
+            return [Oprf.Suite.DECAF448_SHAKE256, GROUP.DECAF448, 'SHAKE256', 64]
         default:
             assertNever('Oprf.Suite', id)
     }
@@ -54,34 +63,17 @@ export function getSupportedSuites(g: GroupCons): Array<SuiteID> {
 }
 
 export abstract class Oprf {
-    public static Crypto: CryptoProvider = CryptoSjcl
-
-    public static get Group(): GroupCons {
-        return this.Crypto.Group
+    static set Crypto(provider: CryptoProvider) {
+        setCryptoProvider(provider)
     }
 
-    static Mode = {
-        OPRF: 0,
-        VOPRF: 1,
-        POPRF: 2
-    } as const
+    static get Crypto(): CryptoProvider {
+        return getCryptoProvider()
+    }
 
-    static Suite = {
-        P256_SHA256: 'P256-SHA256',
-        P384_SHA384: 'P384-SHA384',
-        P521_SHA512: 'P521-SHA512',
-        RISTRETTO255_SHA512: 'ristretto255-SHA512',
-        DECAF448_SHAKE256: 'decaf448-SHAKE256'
-    } as const
-
-    static LABELS = {
-        Version: 'OPRFV1-',
-        FinalizeDST: 'Finalize',
-        HashToGroupDST: 'HashToGroup-',
-        HashToScalarDST: 'HashToScalar-',
-        DeriveKeyPairDST: 'DeriveKeyPair',
-        InfoLabel: 'Info'
-    } as const
+    static Mode = MODE
+    static Suite = SUITE
+    static LABELS = LABELS
 
     private static validateMode(m: ModeID): ModeID {
         switch (m) {
@@ -94,8 +86,8 @@ export abstract class Oprf {
         }
     }
 
-    static getGroup(suite: SuiteID): Group {
-        return Oprf.Group.fromID(getOprfParams(suite)[1])
+    static getGroup(suite: SuiteID, ...arg: CryptoProviderArg): Group {
+        return getSuiteGroup(suite, arg)
     }
 
     static getHash(suite: SuiteID): HashID {
@@ -117,30 +109,28 @@ export abstract class Oprf {
     }
 
     readonly mode: ModeID
-    readonly ID: SuiteID
-    readonly gg: Group
+    readonly suite: SuiteID
     readonly hashID: HashID
 
-    constructor(mode: ModeID, suite: SuiteID) {
+    readonly group: Group
+    readonly crypto: CryptoProvider
+
+    protected constructor(mode: ModeID, suite: SuiteID, ...arg: CryptoProviderArg) {
         const [ID, gid, hash] = getOprfParams(suite)
-        this.ID = ID
-        this.gg = Oprf.Group.fromID(gid)
+        this.crypto = getCrypto(arg)
+        this.group = this.crypto.Group.get(gid)
+        this.suite = ID
         this.hashID = hash
         this.mode = Oprf.validateMode(mode)
     }
 
     protected getDLEQParams(): DLEQParams {
         const EMPTY_DST = ''
-        return {
-            group: this.gg,
-            hashID: this.hashID,
-            hash: Oprf.Crypto.hash,
-            dst: this.getDST(EMPTY_DST)
-        }
+        return { group: this.group.id, hash: this.hashID, dst: this.getDST(EMPTY_DST) }
     }
 
     protected getDST(name: string): Uint8Array {
-        return Oprf.getDST(this.mode, this.ID, name)
+        return Oprf.getDST(this.mode, this.suite, name)
     }
 
     protected async coreFinalize(
@@ -159,7 +149,7 @@ export abstract class Oprf {
             ...toU16LenPrefix(issuedElement),
             new TextEncoder().encode(Oprf.LABELS.FinalizeDST)
         ])
-        return await Oprf.Crypto.hash(this.hashID, hashInput)
+        return await this.crypto.hash(this.hashID, hashInput)
     }
 
     protected scalarFromInfo(info: Uint8Array): Promise<Scalar> {
@@ -168,7 +158,7 @@ export abstract class Oprf {
         }
         const te = new TextEncoder()
         const framedInfo = joinAll([te.encode(Oprf.LABELS.InfoLabel), ...toU16LenPrefix(info)])
-        return this.gg.hashToScalar(framedInfo, this.getDST(Oprf.LABELS.HashToScalarDST))
+        return this.group.hashToScalar(framedInfo, this.getDST(Oprf.LABELS.HashToScalarDST))
     }
 }
 
@@ -203,8 +193,9 @@ export class Evaluation {
         return res
     }
 
-    static deserialize(suite: SuiteID, bytes: Uint8Array): Evaluation {
-        const group = Oprf.getGroup(suite)
+    static deserialize(suite: SuiteID, bytes: Uint8Array, ...arg: CryptoProviderArg): Evaluation {
+        const group = getSuiteGroup(suite, arg)
+
         const { head: evalList, tail } = fromU16LenPrefixDes(group.eltDes, bytes)
         let proof: DLEQProof | undefined
         const proofSize = DLEQProof.size(group)
@@ -215,7 +206,7 @@ export class Evaluation {
                 break
             case Oprf.Mode.VOPRF:
             case Oprf.Mode.POPRF:
-                proof = DLEQProof.deserialize(group, proofBytes)
+                proof = DLEQProof.deserialize(group.id, proofBytes, ...arg)
                 break
             default:
                 assertNever('Oprf.Mode', mode)
@@ -235,8 +226,12 @@ export class EvaluationRequest {
         return this.blinded.every((x, i) => x.isEqual(e.blinded[i as number]))
     }
 
-    static deserialize(suite: SuiteID, bytes: Uint8Array): EvaluationRequest {
-        const g = Oprf.getGroup(suite)
+    static deserialize(
+        suite: SuiteID,
+        bytes: Uint8Array,
+        ...arg: CryptoProviderArg
+    ): EvaluationRequest {
+        const g = getSuiteGroup(suite, arg)
         const { head: blindedList } = fromU16LenPrefixDes(g.eltDes, bytes)
         return new EvaluationRequest(blindedList)
     }
@@ -265,11 +260,11 @@ export class FinalizeData {
         )
     }
 
-    static deserialize(suite: SuiteID, bytes: Uint8Array): FinalizeData {
-        const g = Oprf.getGroup(suite)
+    static deserialize(suite: SuiteID, bytes: Uint8Array, ...arg: CryptoProviderArg): FinalizeData {
+        const g = getSuiteGroup(suite, arg)
         const { head: inputs, tail: t0 } = fromU16LenPrefixUint8Array(bytes)
         const { head: blinds, tail: t1 } = fromU16LenPrefixDes(g.scalarDes, t0)
-        const evalReq = EvaluationRequest.deserialize(suite, t1)
+        const evalReq = EvaluationRequest.deserialize(suite, t1, ...arg)
         return new FinalizeData(inputs, blinds, evalReq)
     }
 }

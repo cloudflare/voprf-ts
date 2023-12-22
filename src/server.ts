@@ -7,14 +7,15 @@ import { DLEQProver } from './dleq.js'
 import type { Elt, Scalar } from './groupTypes.js'
 import { Evaluation, EvaluationRequest, type ModeID, Oprf, type SuiteID } from './oprf.js'
 import { ctEqual, zip } from './util.js'
+import type { CryptoProviderArg } from './cryptoImpl.js'
 
 class baseServer extends Oprf {
+    protected prover = new DLEQProver(this.getDLEQParams(), this.crypto) // hook-able
     protected privateKey: Uint8Array
-
     public supportsWebCryptoOPRF = false
 
-    constructor(mode: ModeID, suite: SuiteID, privateKey: Uint8Array) {
-        super(mode, suite)
+    constructor(mode: ModeID, suite: SuiteID, privateKey: Uint8Array, ...arg: CryptoProviderArg) {
+        super(mode, suite, ...arg)
         this.privateKey = privateKey
     }
 
@@ -30,7 +31,7 @@ class baseServer extends Oprf {
             key,
             {
                 name: 'OPRF',
-                namedCurve: this.gg.id
+                namedCurve: this.group.id
             },
             true,
             ['sign']
@@ -38,16 +39,16 @@ class baseServer extends Oprf {
         // webcrypto accepts only compressed points.
         const compressed = blinded.serialize(true)
         const evalBytes = new Uint8Array(await crypto.subtle.sign('OPRF', crKey, compressed))
-        return this.gg.desElt(evalBytes)
+        return this.group.desElt(evalBytes)
     }
 
     private blindEvaluateGroup(blinded: Elt, key: Uint8Array): Elt {
-        return blinded.mul(this.gg.desScalar(key))
+        return blinded.mul(this.group.desScalar(key))
     }
 
     protected async secretFromInfo(info: Uint8Array): Promise<[Scalar, Scalar]> {
         const m = await this.scalarFromInfo(info)
-        const skS = this.gg.desScalar(this.privateKey)
+        const skS = this.group.desScalar(this.privateKey)
         const t = m.add(skS)
         if (t.isZero()) {
             throw new Error('inverse of zero')
@@ -63,7 +64,7 @@ class baseServer extends Oprf {
             secret = evalSecret.serialize()
         }
 
-        const P = await this.gg.hashToGroup(input, this.getDST(Oprf.LABELS.HashToGroupDST))
+        const P = await this.group.hashToGroup(input, this.getDST(Oprf.LABELS.HashToGroupDST))
         if (P.isIdentity()) {
             throw new Error('InvalidInputError')
         }
@@ -73,8 +74,8 @@ class baseServer extends Oprf {
 }
 
 export class OPRFServer extends baseServer {
-    constructor(suite: SuiteID, privateKey: Uint8Array) {
-        super(Oprf.Mode.OPRF, suite, privateKey)
+    constructor(suite: SuiteID, privateKey: Uint8Array, ...arg: CryptoProviderArg) {
+        super(Oprf.Mode.OPRF, suite, privateKey, ...arg)
     }
 
     async blindEvaluate(req: EvaluationRequest): Promise<Evaluation> {
@@ -83,62 +84,68 @@ export class OPRFServer extends baseServer {
             await Promise.all(req.blinded.map((b) => this.doBlindEvaluation(b, this.privateKey)))
         )
     }
+
     async evaluate(input: Uint8Array): Promise<Uint8Array> {
         return this.doEvaluate(input)
     }
+
     async verifyFinalize(input: Uint8Array, output: Uint8Array): Promise<boolean> {
         return ctEqual(output, await this.doEvaluate(input))
     }
 }
 
 export class VOPRFServer extends baseServer {
-    constructor(suite: SuiteID, privateKey: Uint8Array) {
-        super(Oprf.Mode.VOPRF, suite, privateKey)
+    constructor(suite: SuiteID, privateKey: Uint8Array, ...arg: CryptoProviderArg) {
+        super(Oprf.Mode.VOPRF, suite, privateKey, ...arg)
     }
+
     async blindEvaluate(req: EvaluationRequest): Promise<Evaluation> {
         const evalList = await Promise.all(
             req.blinded.map((b) => this.doBlindEvaluation(b, this.privateKey))
         )
-        const prover = new DLEQProver(this.getDLEQParams())
-        const skS = this.gg.desScalar(this.privateKey)
-        const pkS = this.gg.mulGen(skS)
-        const proof = await prover.prove_batch(
+        const skS = this.group.desScalar(this.privateKey)
+        const pkS = this.group.mulGen(skS)
+        const proof = await this.prover.prove_batch(
             skS,
-            [this.gg.generator(), pkS],
+            [this.group.generator(), pkS],
             zip(req.blinded, evalList)
         )
         return new Evaluation(this.mode, evalList, proof)
     }
+
     async evaluate(input: Uint8Array): Promise<Uint8Array> {
         return this.doEvaluate(input)
     }
+
     async verifyFinalize(input: Uint8Array, output: Uint8Array): Promise<boolean> {
         return ctEqual(output, await this.doEvaluate(input))
     }
 }
 
 export class POPRFServer extends baseServer {
-    constructor(suite: SuiteID, privateKey: Uint8Array) {
-        super(Oprf.Mode.POPRF, suite, privateKey)
+    constructor(suite: SuiteID, privateKey: Uint8Array, ...arg: CryptoProviderArg) {
+        super(Oprf.Mode.POPRF, suite, privateKey, ...arg)
     }
+
     async blindEvaluate(req: EvaluationRequest, info = new Uint8Array(0)): Promise<Evaluation> {
         const [keyProof, evalSecret] = await this.secretFromInfo(info)
         const secret = evalSecret.serialize()
         const evalList = await Promise.all(
             req.blinded.map((b) => this.doBlindEvaluation(b, secret))
         )
-        const prover = new DLEQProver(this.getDLEQParams())
-        const kG = this.gg.mulGen(keyProof)
-        const proof = await prover.prove_batch(
+        const kG = this.group.mulGen(keyProof)
+        const proof = await this.prover.prove_batch(
             keyProof,
-            [this.gg.generator(), kG],
+            [this.group.generator(), kG],
             zip(evalList, req.blinded)
         )
         return new Evaluation(this.mode, evalList, proof)
     }
+
     async evaluate(input: Uint8Array, info = new Uint8Array(0)): Promise<Uint8Array> {
         return this.doEvaluate(input, info)
     }
+
     async verifyFinalize(
         input: Uint8Array,
         output: Uint8Array,

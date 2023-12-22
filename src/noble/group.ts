@@ -5,7 +5,13 @@
 
 import { bytesToNumberBE, bytesToNumberLE } from '@noble/curves/abstract/utils'
 
-import { type Deserializer, type Group, type GroupID, Groups } from '../groupTypes.js'
+import {
+    type Deserializer,
+    GROUP,
+    type Group,
+    type GroupCache,
+    type GroupID
+} from '../groupTypes.js'
 import type { GroupParams } from './types.js'
 import { ScalarNb } from './scalar.js'
 import { EltNb } from './element.js'
@@ -13,15 +19,17 @@ import { getParams } from './params.js'
 
 export class GroupNb implements Group {
     static readonly supportedGroups: GroupID[] = [
-        Groups.RISTRETTO255,
-        Groups.DECAF448,
-        Groups.P256,
-        Groups.P384,
-        Groups.P521
+        GROUP.RISTRETTO255,
+        GROUP.DECAF448,
+        GROUP.P256,
+        GROUP.P384,
+        GROUP.P521
     ]
 
-    static fromID(gid: GroupID) {
-        return new this(gid)
+    static readonly #cache: GroupCache = {}
+
+    static get(gid: GroupID) {
+        return (this.#cache[`${gid}`] ??= new this(gid))
     }
 
     public readonly params: GroupParams

@@ -3,12 +3,12 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { describeGroupTests } from './describeGroupTests.js'
+import { describeCryptoTests } from './describeCryptoTests.js'
 import { serdesEquals } from './util.js'
 
-describeGroupTests((Group) => {
-    describe.each(Group.supportedGroups)('%s', (id) => {
-        const gg = Group.fromID(id)
+describeCryptoTests(({ provider, supportedGroups }) => {
+    describe.each(supportedGroups)('%s', (id) => {
+        const gg = provider.Group.get(id)
 
         it('serdeElement', async () => {
             const P = gg.mulGen(await gg.randomScalar())

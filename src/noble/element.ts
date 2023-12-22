@@ -5,9 +5,10 @@
 
 import type { ProjPointType } from '@noble/curves/abstract/weierstrass'
 import type { Elt } from '../groupTypes.js'
-import { ScalarNb } from './scalar.js'
 import type { Point, PointConstructor } from './types.js'
 import type { GroupNb } from './group.js'
+import type { ScalarNb } from './scalar.js'
+
 import { compat, errDeserialization } from '../util.js'
 
 export class EltNb implements Elt {

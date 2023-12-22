@@ -3,7 +3,6 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { DLEQVerifier } from './dleq.js'
 import type { Elt, Scalar } from './groupTypes.js'
 import {
     Evaluation,
@@ -13,15 +12,18 @@ import {
     Oprf,
     type SuiteID
 } from './oprf.js'
+
 import { zip } from './util.js'
+import type { CryptoProviderArg } from './cryptoImpl.js'
+import { DLEQVerifier } from './dleq.js'
 
 class baseClient extends Oprf {
-    constructor(mode: ModeID, suite: SuiteID) {
-        super(mode, suite)
+    constructor(mode: ModeID, suite: SuiteID, ...arg: CryptoProviderArg) {
+        super(mode, suite, ...arg)
     }
 
     randomBlinder(): Promise<Scalar> {
-        return this.gg.randomScalar()
+        return this.group.randomScalar()
     }
 
     async blind(inputs: Uint8Array[]): Promise<[FinalizeData, EvaluationRequest]> {
@@ -29,7 +31,7 @@ class baseClient extends Oprf {
         const blinds = []
         for (const input of inputs) {
             const scalar = await this.randomBlinder()
-            const inputElement = await this.gg.hashToGroup(
+            const inputElement = await this.group.hashToGroup(
                 input,
                 this.getDST(Oprf.LABELS.HashToGroupDST)
             )
@@ -66,9 +68,10 @@ class baseClient extends Oprf {
 }
 
 export class OPRFClient extends baseClient {
-    constructor(suite: SuiteID) {
-        super(Oprf.Mode.OPRF, suite)
+    constructor(suite: SuiteID, ...arg: CryptoProviderArg) {
+        super(Oprf.Mode.OPRF, suite, ...arg)
     }
+
     finalize(finData: FinalizeData, evaluation: Evaluation): Promise<Array<Uint8Array>> {
         return super.doFinalize(finData, evaluation)
     }
@@ -77,26 +80,27 @@ export class OPRFClient extends baseClient {
 export class VOPRFClient extends baseClient {
     constructor(
         suite: SuiteID,
-        private readonly pubKeyServer: Uint8Array
+        private readonly pubKeyServer: Uint8Array,
+        ...arg: CryptoProviderArg
     ) {
-        super(Oprf.Mode.VOPRF, suite)
+        super(Oprf.Mode.VOPRF, suite, ...arg)
     }
 
     async finalize(finData: FinalizeData, evaluation: Evaluation): Promise<Array<Uint8Array>> {
         if (!evaluation.proof) {
             throw new Error('no proof provided')
         }
-        const pkS = this.gg.desElt(this.pubKeyServer)
+        const pkS = this.group.desElt(this.pubKeyServer)
 
         const n = finData.inputs.length
         if (evaluation.evaluated.length !== n) {
             throw new Error('mismatched lengths')
         }
 
-        const verifier = new DLEQVerifier(this.getDLEQParams())
+        const verifier = new DLEQVerifier(this.getDLEQParams(), this.crypto)
         if (
             !(await verifier.verify_batch(
-                [this.gg.generator(), pkS],
+                [this.group.generator(), pkS],
                 zip(finData.evalReq.blinded, evaluation.evaluated),
                 evaluation.proof
             ))
@@ -111,15 +115,16 @@ export class VOPRFClient extends baseClient {
 export class POPRFClient extends baseClient {
     constructor(
         suite: SuiteID,
-        private readonly pubKeyServer: Uint8Array
+        private readonly pubKeyServer: Uint8Array,
+        ...arg: CryptoProviderArg
     ) {
-        super(Oprf.Mode.POPRF, suite)
+        super(Oprf.Mode.POPRF, suite, ...arg)
     }
 
     private async pointFromInfo(info: Uint8Array): Promise<Elt> {
         const m = await this.scalarFromInfo(info)
-        const T = this.gg.mulGen(m)
-        const pkS = this.gg.desElt(this.pubKeyServer)
+        const T = this.group.mulGen(m)
+        const pkS = this.group.desElt(this.pubKeyServer)
         const tw = pkS.add(T)
         if (tw.isIdentity()) {
             throw new Error('invalid info')
@@ -141,10 +146,10 @@ export class POPRFClient extends baseClient {
             throw new Error('mismatched lengths')
         }
 
-        const verifier = new DLEQVerifier(this.getDLEQParams())
+        const verifier = new DLEQVerifier(this.getDLEQParams(), this.crypto)
         if (
             !(await verifier.verify_batch(
-                [this.gg.generator(), tw],
+                [this.group.generator(), tw],
                 zip(evaluation.evaluated, finData.evalReq.blinded),
                 evaluation.proof
             ))

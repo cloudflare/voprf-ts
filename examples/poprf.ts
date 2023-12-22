@@ -9,7 +9,7 @@ import {
     POPRFServer,
     generatePublicKey,
     randomPrivateKey
-} from '../src/index.js'
+} from '@cloudflare/voprf-ts'
 
 // Example: POPRF mode with the P256_SHA256 suite.
 export async function poprfExample() {

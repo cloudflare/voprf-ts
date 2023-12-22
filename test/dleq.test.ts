@@ -5,29 +5,27 @@
 
 import {
     type DLEQParams,
-    type Elt,
-    type Scalar,
     DLEQProof,
     DLEQProver,
-    Oprf,
-    DLEQVerifier
+    DLEQVerifier,
+    type Elt,
+    type Scalar
 } from '../src/index.js'
-import { describeGroupTests } from './describeGroupTests.js'
+import { describeCryptoTests } from './describeCryptoTests.js'
 import { serdeClass } from './util.js'
 
-describeGroupTests((g) => {
-    describe.each(g.supportedGroups)('DLEQ', (id) => {
+describeCryptoTests(({ provider, supportedGroups }) => {
+    describe.each(supportedGroups)('DLEQ', (id) => {
         const groupName = id
-        const gg = Oprf.Crypto.Group.fromID(id)
+        const group = provider.Group.get(id)
         const te = new TextEncoder()
         const params: DLEQParams = {
-            group: gg,
-            hash: Oprf.Crypto.hash,
-            hashID: 'SHA-256',
+            group: id,
+            hash: 'SHA-256',
             dst: te.encode('domain-sep')
         }
-        const Peggy = new DLEQProver(params)
-        const Victor = new DLEQVerifier(params)
+        const Peggy = new DLEQProver(params, provider)
+        const Victor = new DLEQVerifier(params, provider)
 
         let k: Scalar
         let P: Elt
@@ -40,16 +38,16 @@ describeGroupTests((g) => {
 
         describe.each([...Array(5).keys()])(`${groupName}`, (i: number) => {
             beforeAll(async () => {
-                k = await gg.randomScalar()
-                P = gg.mulGen(await gg.randomScalar())
+                k = await group.randomScalar()
+                P = group.mulGen(await group.randomScalar())
                 kP = P.mul(k)
-                Q = gg.mulGen(await gg.randomScalar())
+                Q = group.mulGen(await group.randomScalar())
                 kQ = Q.mul(k)
                 proof = await Peggy.prove(k, [P, kP], [Q, kQ])
 
                 list = new Array<[Elt, Elt]>()
                 for (let l = 0; l < 3; l++) {
-                    const R = gg.mulGen(await gg.randomScalar())
+                    const R = group.mulGen(await group.randomScalar())
                     const kR = R.mul(k)
                     list.push([R, kR])
                 }
@@ -73,14 +71,14 @@ describeGroupTests((g) => {
             })
 
             it(`bad-key/${i}`, async () => {
-                const badKey = await gg.randomScalar()
+                const badKey = await group.randomScalar()
                 const badProof: DLEQProof = await Peggy.prove(badKey, [P, kP], [Q, kQ])
                 expect(await Victor.verify([P, kP], [Q, kQ], badProof)).toBe(false)
             })
 
             it(`serde/${i}`, async () => {
-                expect(serdeClass(DLEQProof, proof, gg)).toBe(true)
-                expect(serdeClass(DLEQProof, proofBatched, gg)).toBe(true)
+                expect(serdeClass(DLEQProof, proof, id, provider)).toBe(true)
+                expect(serdeClass(DLEQProof, proofBatched, id, provider)).toBe(true)
             })
         })
     })
