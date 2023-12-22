@@ -4,14 +4,16 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import {
+    type CryptoProvider,
+    Oprf,
     OPRFClient,
     OPRFServer,
-    Oprf,
-    POPRFClient,
     POPRFServer,
+    POPRFClient,
     VOPRFClient,
     VOPRFServer,
     generatePublicKey,
+    getSupportedSuites,
     randomPrivateKey
 } from '../src/index.js'
 
@@ -27,36 +29,36 @@ function asyncFn(call: CallableFunction) {
     }
 }
 
-export async function benchOPRF(bs: Benchmark.Suite) {
+export async function benchOPRF(provider: CryptoProvider, bs: Benchmark.Suite) {
     const te = new TextEncoder()
     const input = te.encode('This is the client input')
 
     for (const [mode, m] of Object.entries(Oprf.Mode)) {
-        for (const [suite, id] of Object.entries(Oprf.Suite)) {
-            const privateKey = await randomPrivateKey(id)
-            const publicKey = generatePublicKey(id, privateKey)
+        for (const id of getSupportedSuites(provider.Group)) {
+            const privateKey = await randomPrivateKey(id, provider)
+            const publicKey = generatePublicKey(id, privateKey, provider)
             let server: OPRFServer | VOPRFServer | POPRFServer
             let client: OPRFClient | VOPRFClient | POPRFClient
 
             switch (m) {
                 case Oprf.Mode.OPRF:
-                    server = new OPRFServer(id, privateKey)
-                    client = new OPRFClient(id)
+                    server = new OPRFServer(id, privateKey, provider)
+                    client = new OPRFClient(id, provider)
                     break
 
                 case Oprf.Mode.VOPRF:
-                    server = new VOPRFServer(id, privateKey)
-                    client = new VOPRFClient(id, publicKey)
+                    server = new VOPRFServer(id, privateKey, provider)
+                    client = new VOPRFClient(id, publicKey, provider)
                     break
                 case Oprf.Mode.POPRF:
-                    server = new POPRFServer(id, privateKey)
-                    client = new POPRFClient(id, publicKey)
+                    server = new POPRFServer(id, privateKey, provider)
+                    client = new POPRFClient(id, publicKey, provider)
                     break
             }
 
             const [finData, evalReq] = await client.blind([input])
             const evaluatedElement = await server.blindEvaluate(evalReq)
-            const prefix = mode + '/' + suite + '/'
+            const prefix = mode + '/' + id + '/'
 
             bs.add(
                 prefix + 'blind    ',

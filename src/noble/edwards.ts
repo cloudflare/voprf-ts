@@ -17,7 +17,7 @@ export interface MakeEdParamsParams {
     hash: CHash
 }
 
-export function makeEdParams({
+export function edwardsCurve({
     curve,
     hashID,
     scalarHash,

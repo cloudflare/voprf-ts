@@ -13,8 +13,9 @@ import {
     type GroupCons,
     type GroupID,
     type Scalar,
-    Groups,
-    errBadGroup
+    errBadGroup,
+    type GroupCache,
+    GROUP
 } from './groupTypes.js'
 
 function hashParams(hash: string): {
@@ -76,14 +77,14 @@ async function expandXMD(
 
 function getCurve(gid: GroupID): sjcl.ecc.curve {
     switch (gid) {
-        case Groups.P256:
+        case GROUP.P256:
             return sjcl.ecc.curves.c256
-        case Groups.P384:
+        case GROUP.P384:
             return sjcl.ecc.curves.c384
-        case Groups.P521:
+        case GROUP.P521:
             return sjcl.ecc.curves.c521
-        case Groups.DECAF448:
-        case Groups.RISTRETTO255:
+        case GROUP.DECAF448:
+        case GROUP.RISTRETTO255:
             throw new Error('group: non-supported ciphersuite')
         default:
             throw errBadGroup(gid)
@@ -190,19 +191,19 @@ function getSSWUParams(gid: GroupID): SSWUParams {
     let Z
     let c2
     switch (gid) {
-        case Groups.P256:
+        case GROUP.P256:
             Z = -10
             // c2 = sqrt(-Z) in GF(p).
             c2 = '0x25ac71c31e27646736870398ae7f554d8472e008b3aa2a49d332cbd81bcc3b80'
 
             break
-        case Groups.P384:
+        case GROUP.P384:
             Z = -12
             // c2 = sqrt(-Z) in GF(p).
             c2 =
                 '0x2accb4a656b0249c71f0500e83da2fdd7f98e383d68b53871f872fcb9ccb80c53c0de1f8a80f7e1914e2ec69f5a626b3'
             break
-        case Groups.P521:
+        case GROUP.P521:
             Z = -4
             // c2 = sqrt(-Z) in GF(p).
             c2 = '0x2'
@@ -226,11 +227,11 @@ interface HashParams {
 
 function getHashParams(gid: GroupID): HashParams {
     switch (gid) {
-        case Groups.P256:
+        case GROUP.P256:
             return { hash: 'SHA-256', L: 48 }
-        case Groups.P384:
+        case GROUP.P384:
             return { hash: 'SHA-384', L: 72 }
-        case Groups.P521:
+        case GROUP.P521:
             return { hash: 'SHA-512', L: 98 }
         default:
             throw errBadGroup(gid)
@@ -477,9 +478,11 @@ class EltSj implements Elt {
 }
 
 class GroupSj implements Group {
-    static readonly supportedGroups: GroupID[] = [Groups.P256, Groups.P384, Groups.P521]
-    static fromID(gid: GroupID) {
-        return new this(gid)
+    static readonly supportedGroups: GroupID[] = [GROUP.P256, GROUP.P384, GROUP.P521]
+    static readonly #cache: GroupCache = {}
+
+    static get(gid: GroupID) {
+        return (this.#cache[`${gid}`] ??= new this(gid))
     }
 
     readonly id: GroupID
@@ -487,13 +490,13 @@ class GroupSj implements Group {
 
     constructor(gid: GroupID) {
         switch (gid) {
-            case Groups.P256:
+            case GROUP.P256:
                 this.size = 32
                 break
-            case Groups.P384:
+            case GROUP.P384:
                 this.size = 48
                 break
-            case Groups.P521:
+            case GROUP.P521:
                 this.size = 66
                 break
             default:

@@ -5,15 +5,15 @@
 //
 // Implementation of batched discrete log equivalents proofs (DLEQ) as
 // described in https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-21#name-discrete-logarithm-equivale
-import type { HashID } from './cryptoTypes.js'
-import type { Elt, Group, Scalar } from './groupTypes.js'
+import type { CryptoProvider, HashID } from './cryptoTypes.js'
+import type { Elt, Group, GroupID, Scalar } from './groupTypes.js'
 import { checkSize, joinAll, to16bits, toU16LenPrefix } from './util.js'
+import { type CryptoProviderArg, getCrypto, getGroup } from './cryptoImpl.js'
 
 export interface DLEQParams {
-    readonly group: Group
     readonly dst: Uint8Array
-    readonly hashID: HashID
-    hash(hashID: HashID, input: Uint8Array): Promise<Uint8Array>
+    readonly group: GroupID
+    readonly hash: HashID
 }
 
 const LABELS = {
@@ -29,18 +29,22 @@ async function computeComposites(
     params: DLEQParams,
     b: Elt,
     cd: Array<[Elt, Elt]>,
-    key?: Scalar
+    key: Scalar | undefined,
+    ...arg: CryptoProviderArg
 ): Promise<{ M: Elt; Z: Elt }> {
+    const crypto = getCrypto(arg)
+    const group = crypto.Group.get(params.group)
+
     const te = new TextEncoder()
     const Bm = b.serialize()
     const seedDST = joinAll([te.encode(LABELS.Seed), params.dst])
     const h1Input = joinAll([...toU16LenPrefix(Bm), ...toU16LenPrefix(seedDST)])
-    const seed = await params.hash(params.hashID, h1Input)
+    const seed = await crypto.hash(params.hash, h1Input)
 
     const compositeLabel = te.encode(LABELS.Composite)
     const h2sDST = joinAll([te.encode(LABELS.HashToScalar), params.dst])
-    let M = params.group.identity()
-    let Z = params.group.identity()
+    let M = group.identity()
+    let Z = group.identity()
     let i = 0
     for (const [c, d] of cd) {
         const Ci = c.serialize()
@@ -53,7 +57,7 @@ async function computeComposites(
             ...toU16LenPrefix(Di),
             compositeLabel
         ])
-        const di = await params.group.hashToScalar(h2Input, h2sDST)
+        const di = await group.hashToScalar(h2Input, h2sDST)
         M = M.add(c.mul(di))
 
         if (!key) {
@@ -73,7 +77,11 @@ async function computeComposites(
 // from https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-voprf-21#name-discrete-logarithm-equivale
 // to generate a challenge from the input elements. The point arguments
 // correspond to [B, M, Z, t2, t3] from the specification.
-function challenge(params: DLEQParams, points: [Elt, Elt, Elt, Elt, Elt]): Promise<Scalar> {
+function challenge(
+    group: Group,
+    params: DLEQParams,
+    points: [Elt, Elt, Elt, Elt, Elt]
+): Promise<Scalar> {
     let h2Input = new Uint8Array()
     for (const p of points) {
         const P = p.serialize()
@@ -82,7 +90,7 @@ function challenge(params: DLEQParams, points: [Elt, Elt, Elt, Elt, Elt]): Promi
     const te = new TextEncoder()
     h2Input = joinAll([h2Input, te.encode(LABELS.Challenge)])
     const h2sDST = joinAll([te.encode(LABELS.HashToScalar), params.dst])
-    return params.group.hashToScalar(h2Input, h2sDST)
+    return group.hashToScalar(h2Input, h2sDST)
 }
 
 export class DLEQProof {
@@ -99,21 +107,31 @@ export class DLEQProof {
         return joinAll([this.c.serialize(), this.s.serialize()])
     }
 
-    static size(g: Group): number {
-        return 2 * g.scalarSize()
+    static size(group: Group): number {
+        return 2 * group.scalarSize()
     }
 
-    static deserialize(g: Group, bytes: Uint8Array): DLEQProof {
-        checkSize(bytes, DLEQProof, g)
-        const n = g.scalarSize()
-        const c = g.desScalar(bytes.subarray(0, n))
-        const s = g.desScalar(bytes.subarray(n, 2 * n))
+    static deserialize(groupID: GroupID, bytes: Uint8Array, ...arg: CryptoProviderArg): DLEQProof {
+        const group = getGroup(groupID, arg)
+        checkSize(bytes, DLEQProof, group)
+        const n = group.scalarSize()
+        const c = group.desScalar(bytes.subarray(0, n))
+        const s = group.desScalar(bytes.subarray(n, 2 * n))
         return new DLEQProof(c, s)
     }
 }
 
 export class DLEQVerifier {
-    constructor(public readonly params: DLEQParams) {}
+    readonly crypto: CryptoProvider
+    readonly group: Group
+
+    constructor(
+        public readonly params: DLEQParams,
+        ...arg: CryptoProviderArg
+    ) {
+        this.crypto = getCrypto(arg)
+        this.group = this.crypto.Group.get(params.group)
+    }
 
     verify(p0: [Elt, Elt], p1: [Elt, Elt], proof: DLEQProof): Promise<boolean> {
         return this.verify_batch(p0, [p1], proof)
@@ -124,10 +142,10 @@ export class DLEQVerifier {
     // The argument p0 corresponds to the elements A, B, and the argument p1s
     // corresponds to the arrays of elements C and D from the specification.
     async verify_batch(p0: [Elt, Elt], p1s: Array<[Elt, Elt]>, proof: DLEQProof): Promise<boolean> {
-        const { M, Z } = await computeComposites(this.params, p0[1], p1s)
+        const { M, Z } = await computeComposites(this.params, p0[1], p1s, undefined, this.crypto)
         const t2 = p0[0].mul2(proof.s, p0[1], proof.c)
         const t3 = M.mul2(proof.s, Z, proof.c)
-        const c = await challenge(this.params, [p0[1], M, Z, t2, t3])
+        const c = await challenge(this.group, this.params, [p0[1], M, Z, t2, t3])
         return proof.c.isEqual(c)
     }
 }
@@ -137,8 +155,8 @@ export class DLEQProver extends DLEQVerifier {
         return this.prove_batch(k, p0, [p1], r)
     }
 
-    randomScalar(): Promise<Scalar> {
-        return this.params.group.randomScalar()
+    randomScalar() {
+        return this.group.randomScalar()
     }
 
     // prove_batch implements the GenerateProof function
@@ -152,10 +170,10 @@ export class DLEQProver extends DLEQVerifier {
         r?: Scalar
     ): Promise<DLEQProof> {
         const rnd = r ? r : await this.randomScalar()
-        const { M, Z } = await computeComposites(this.params, p0[1], p1s, key)
+        const { M, Z } = await computeComposites(this.params, p0[1], p1s, key, this.crypto)
         const t2 = p0[0].mul(rnd)
         const t3 = M.mul(rnd)
-        const c = await challenge(this.params, [p0[1], M, Z, t2, t3])
+        const c = await challenge(this.group, this.params, [p0[1], M, Z, t2, t3])
         const s = rnd.sub(c.mul(key))
         return new DLEQProof(c, s)
     }

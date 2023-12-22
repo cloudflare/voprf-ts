@@ -15,7 +15,7 @@ export interface MakeShortParamsArgs {
     securityBits: number
 }
 
-export function makeShortParams({
+export function shortCurve({
     hashID,
     curve,
     elementHash,

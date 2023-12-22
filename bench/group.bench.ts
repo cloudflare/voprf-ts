@@ -4,7 +4,7 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import Benchmark from 'benchmark'
-import { Oprf } from '../src/index.js'
+import { type CryptoProvider } from '@cloudflare/voprf-ts'
 
 function asyncFn(call: CallableFunction) {
     return {
@@ -16,13 +16,13 @@ function asyncFn(call: CallableFunction) {
     }
 }
 
-export async function benchGroup(bs: Benchmark.Suite) {
+export async function benchGroup(provider: CryptoProvider, bs: Benchmark.Suite) {
     const te = new TextEncoder()
     const msg = te.encode('msg')
     const dst = te.encode('dst')
 
-    for (const id of Oprf.Group.supportedGroups) {
-        const gg = Oprf.Group.fromID(id)
+    for (const id of provider.Group.supportedGroups) {
+        const gg = provider.Group.get(id)
         const k = await gg.randomScalar()
         const P = gg.mulGen(k)
         const Q = P.mul(k)

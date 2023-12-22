@@ -5,15 +5,8 @@
 
 import { jest } from '@jest/globals'
 
-import {
-    getSupportedSuites,
-    type GroupID,
-    Oprf,
-    OPRFClient,
-    OPRFServer,
-    randomPrivateKey
-} from '../src/index.js'
-import { describeGroupTests } from './describeGroupTests.js'
+import { type GroupID, OPRFClient, OPRFServer, randomPrivateKey } from '../src/index.js'
+import { describeCryptoTests } from './describeCryptoTests.js'
 
 const { sign, importKey } = crypto.subtle
 
@@ -37,23 +30,23 @@ function mockImportKey(...x: Parameters<typeof importKey>): ReturnType<typeof im
     throw new Error('bad algorithm')
 }
 
-function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
-    const [algorithm, key, data] = x
-    if (algorithm === 'OPRF') {
-        const algorithmName = (key.algorithm as EcdsaParams).name
-        const g = Oprf.Group.fromID(algorithmName as GroupID)
-        const P = g.desElt(new Uint8Array(data as ArrayBuffer))
-        const serSk = new Uint8Array((key as CryptoKeyWithBuffer).keyData)
-        const sk = g.desScalar(serSk)
-        const Z = P.mul(sk)
-        const serZ = Z.serialize()
-        return Promise.resolve(serZ.buffer as ArrayBuffer)
+describeCryptoTests(({ provider, supportedSuites }) => {
+    function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
+        const [algorithm, key, data] = x
+        if (algorithm === 'OPRF') {
+            const algorithmName = (key.algorithm as EcdsaParams).name
+            const g = provider.Group.get(algorithmName as GroupID)
+            const P = g.desElt(new Uint8Array(data as ArrayBuffer))
+            const serSk = new Uint8Array((key as CryptoKeyWithBuffer).keyData)
+            const sk = g.desScalar(serSk)
+            const Z = P.mul(sk)
+            const serZ = Z.serialize()
+            return Promise.resolve(serZ.buffer as ArrayBuffer)
+        }
+        throw new Error('bad algorithm')
     }
-    throw new Error('bad algorithm')
-}
 
-describeGroupTests((g) => {
-    describe.each(getSupportedSuites(g))('supportsWebCrypto', (id) => {
+    describe.each(supportedSuites)('supportsWebCrypto', (id) => {
         beforeAll(() => {
             jest.spyOn(crypto.subtle, 'importKey').mockImplementation(mockImportKey)
             jest.spyOn(crypto.subtle, 'sign').mockImplementation(mockSign)
@@ -61,9 +54,9 @@ describeGroupTests((g) => {
 
         it(`${id}`, async () => {
             const te = new TextEncoder()
-            const privateKey = await randomPrivateKey(id)
-            const server = new OPRFServer(id, privateKey)
-            const client = new OPRFClient(id)
+            const privateKey = await randomPrivateKey(id, provider)
+            const server = new OPRFServer(id, privateKey, provider)
+            const client = new OPRFClient(id, provider)
             const input = te.encode('This is the client input')
             const [, reqEval] = await client.blind([input])
 

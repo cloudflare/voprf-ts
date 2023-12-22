@@ -3599,12 +3599,12 @@ sjcl.codec.arrayBuffer = {
   }
 };
 
-if(typeof module !== 'undefined' && module.exports){
-  module.exports = sjcl;
-}
-if (typeof define === "function") {
-    define([], function () {
-        return sjcl;
-    });
-}
+// if(typeof module !== 'undefined' && module.exports){
+//   module.exports = sjcl;
+// }
+// if (typeof define === "function") {
+//     define([], function () {
+//         return sjcl;
+//     });
+// }
 export default sjcl;

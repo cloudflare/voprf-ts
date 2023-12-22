@@ -74,6 +74,10 @@ Finally, the client can produce the output[s] of the OPRF protocol using the ser
 const [output] = await client.finalize(finData, evaluation);
 ```
 
+### Facade API 
+
+See [examples](examples/facade/index.ts)
+
 ### Development
 
 | Task            | NPM scripts          |

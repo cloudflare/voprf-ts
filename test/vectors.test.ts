@@ -6,7 +6,6 @@
 import {
     derivePrivateKey,
     generatePublicKey,
-    getSupportedSuites,
     type ModeID,
     Oprf,
     OPRFClient,
@@ -15,10 +14,9 @@ import {
     POPRFServer,
     type SuiteID,
     VOPRFClient,
-    VOPRFServer,
-    DLEQProver
+    VOPRFServer
 } from '../src/index.js'
-import { describeGroupTests } from './describeGroupTests.js'
+import { describeCryptoTests } from './describeCryptoTests.js'
 
 // Test vectors taken from reference implementation at https://github.com/cfrg/draft-irtf-cfrg-voprf
 import allVectors from './testdata/allVectors_v20.json'
@@ -45,36 +43,6 @@ function toHexListClass(x: { serialize(): Uint8Array }[]): string {
     return toHexListUint8Array(x.map((xi) => xi.serialize()))
 }
 
-class wrapPOPRFServer extends POPRFServer {
-    info!: Uint8Array
-
-    blindEvaluate(
-        ...r: Parameters<OPRFServer['blindEvaluate']>
-    ): ReturnType<OPRFServer['blindEvaluate']> {
-        return super.blindEvaluate(r[0], this.info)
-    }
-
-    async evaluate(input: Uint8Array): Promise<Uint8Array> {
-        return super.evaluate(input, this.info)
-    }
-
-    async verifyFinalize(input: Uint8Array, output: Uint8Array): Promise<boolean> {
-        return super.verifyFinalize(input, output, this.info)
-    }
-}
-
-class wrapPOPRFClient extends POPRFClient {
-    info!: Uint8Array
-
-    blind(inputs: Uint8Array[]): ReturnType<OPRFClient['blind']> {
-        return super.blind(inputs)
-    }
-
-    finalize(...r: Parameters<OPRFClient['finalize']>): ReturnType<OPRFClient['finalize']> {
-        return super.finalize(...r, this.info)
-    }
-}
-
 type SingleVector = {
     Batch: number
     Blind: string
@@ -99,42 +67,43 @@ type TestVector = {
     skSm: string
     vectors: SingleVector[]
 }
-
-describeGroupTests((g) => {
+describeCryptoTests(({ provider, supportedSuites: supported }) => {
     // Test vectors from https://datatracker.ietf.org/doc/draft-irtf-cfrg-voprf
     // https://tools.ietf.org/html/draft-irtf-cfrg-voprf-11
     describe.each(allVectors)('test-vectors', (testVector: TestVector) => {
         const mode = testVector.mode as ModeID
         const txtMode = Object.entries(Oprf.Mode)[mode as number][0]
 
-        const supported = getSupportedSuites(g)
         const id = testVector.identifier as SuiteID
-        const describeOrSkip = supported.includes(id) ? describe : describe.skip
+        const isSupported = supported.find((v) => v[0] === id)
+        const describeOrSkip = isSupported ? describe : describe.skip
 
         describeOrSkip(`${txtMode}, ${id}`, () => {
+            const suiteParams = isSupported!
+
             let skSm: Uint8Array
-            let server: OPRFServer | VOPRFServer | wrapPOPRFServer
-            let client: OPRFClient | VOPRFClient | wrapPOPRFClient
+            let server: OPRFServer | VOPRFServer | POPRFServer
+            let client: OPRFClient | VOPRFClient | POPRFClient
 
             beforeAll(async () => {
                 const seed = fromHex(testVector.seed)
                 const keyInfo = fromHex(testVector.keyInfo)
-                skSm = await derivePrivateKey(mode, id, seed, keyInfo)
-                const pkSm = generatePublicKey(id, skSm)
+                skSm = await derivePrivateKey(mode, id, seed, keyInfo, provider)
+                const pkSm = generatePublicKey(id, skSm, provider)
                 switch (mode) {
                     case Oprf.Mode.OPRF:
-                        server = new OPRFServer(id, skSm)
-                        client = new OPRFClient(id)
+                        server = new OPRFServer(id, skSm, provider)
+                        client = new OPRFClient(id, provider)
                         break
 
                     case Oprf.Mode.VOPRF:
-                        server = new VOPRFServer(id, skSm)
-                        client = new VOPRFClient(id, pkSm)
+                        server = new VOPRFServer(id, skSm, provider)
+                        client = new VOPRFClient(id, pkSm, provider)
                         break
 
                     case Oprf.Mode.POPRF:
-                        server = new wrapPOPRFServer(id, skSm)
-                        client = new wrapPOPRFClient(id, pkSm)
+                        server = new POPRFServer(id, skSm, provider)
+                        client = new POPRFClient(id, pkSm, provider)
                         break
                 }
             })
@@ -145,7 +114,7 @@ describeGroupTests((g) => {
 
             describe.each(testVector.vectors)('vec$#', (vi: SingleVector) => {
                 it('protocol', async () => {
-                    const group = Oprf.getGroup(id)
+                    const group = provider.Group.get(suiteParams[1])
 
                     // Creates a mock for randomBlinder method to
                     // inject the blind value given by the test vector.
@@ -160,15 +129,14 @@ describeGroupTests((g) => {
                     // Creates a mock for DLEQProver.randomScalar method to
                     // inject the random value used to generate a DLEQProof.
                     if (vi.Proof) {
-                        jest.spyOn(DLEQProver.prototype, 'randomScalar').mockResolvedValueOnce(
+                        jest.spyOn(server['prover'], 'randomScalar').mockResolvedValueOnce(
                             group.desScalar(fromHex(vi.Proof.r))
                         )
                     }
 
-                    if (testVector.mode === Oprf.Mode.POPRF && vi.Info) {
-                        const info = fromHex(vi.Info)
-                        ;(server as wrapPOPRFServer).info = info
-                        ;(client as wrapPOPRFClient).info = info
+                    let info: Uint8Array | undefined = undefined
+                    if (testVector.mode === Oprf.Mode.POPRF) {
+                        info = fromHex(vi.Info!)
                     }
 
                     const input = fromHexList(vi.Input)
@@ -176,17 +144,17 @@ describeGroupTests((g) => {
                     expect(toHexListClass(finData.blinds)).toEqual(vi.Blind)
                     expect(toHexListClass(evalReq.blinded)).toEqual(vi.BlindedElement)
 
-                    const ev = await server.blindEvaluate(evalReq)
+                    const ev = await server.blindEvaluate(evalReq, info)
                     expect(toHexListClass(ev.evaluated)).toEqual(vi.EvaluationElement)
                     expect(ev.proof && toHexListClass([ev.proof])).toEqual(
                         vi.Proof && vi.Proof.proof
                     )
 
-                    const output = await client.finalize(finData, ev)
+                    const output = await client.finalize(finData, ev, info)
                     expect(toHexListUint8Array(output)).toEqual(vi.Output)
 
                     const serverCheckOutput = zip(input, output).every(
-                        async (inout) => await server.verifyFinalize(inout[0], inout[1])
+                        async (inout) => await server.verifyFinalize(inout[0], inout[1], info)
                     )
                     expect(serverCheckOutput).toBe(true)
                 })

@@ -2,43 +2,43 @@
 // Copyright (c) 2021 Cloudflare, Inc.
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
-
 import * as p256 from '@noble/curves/p256'
 import * as p384 from '@noble/curves/p384'
 import * as p521 from '@noble/curves/p521'
 import * as ed25519 from '@noble/curves/ed25519'
-import { hashToRistretto255 } from '@noble/curves/ed25519'
 import * as ed448 from '@noble/curves/ed448'
+import { hashToRistretto255 } from '@noble/curves/ed25519'
 import { hashToDecaf448 } from '@noble/curves/ed448'
-
-import { errBadGroup, type GroupID, Groups } from '../groupTypes.js'
-import type { GroupParams } from './types.js'
-import { makeShortParams } from './short.js'
-import { makeEdParams } from './edwards.js'
-import { shake256_512 } from './hashes.js'
 import { sha512 } from '@noble/hashes/sha512'
 
+import { errBadGroup, GROUP, type GroupID } from '../groupTypes.js'
+import type { GroupParams } from './types.js'
+
+import { shortCurve } from './short.js'
+import { edwardsCurve } from './edwards.js'
+import { shake256_512 } from './hashes.js'
+
 const GROUPS: Record<GroupID, GroupParams> = {
-    [Groups.P256]: makeShortParams({
+    [GROUP.P256]: shortCurve({
         curve: p256.p256,
         hashID: 'SHA-256',
         elementHash: p256.hashToCurve,
         securityBits: 128
     }),
-    [Groups.P384]: makeShortParams({
+    [GROUP.P384]: shortCurve({
         curve: p384.p384,
         hashID: 'SHA-384',
         elementHash: p384.hashToCurve,
         securityBits: 192
     }),
-    [Groups.P521]: makeShortParams({
+    [GROUP.P521]: shortCurve({
         curve: p521.p521,
         hashID: 'SHA-512',
         elementHash: p521.hashToCurve,
         securityBits: 256
     }),
 
-    [Groups.RISTRETTO255]: makeEdParams({
+    [GROUP.RISTRETTO255]: edwardsCurve({
         curve: ed25519.ed25519,
         hashID: 'SHA-512',
         scalarHash: { type: 'xmd' },
@@ -48,7 +48,7 @@ const GROUPS: Record<GroupID, GroupParams> = {
         },
         hash: sha512
     }),
-    [Groups.DECAF448]: makeEdParams({
+    [GROUP.DECAF448]: edwardsCurve({
         curve: ed448.ed448,
         hashID: 'SHAKE256',
         scalarHash: { type: 'xof', k: 448 },
@@ -61,7 +61,6 @@ const GROUPS: Record<GroupID, GroupParams> = {
 }
 
 export function getParams(gid: GroupID) {
-    if (!Object.values(Groups).includes(gid)) throw errBadGroup(gid)
-    // eslint-disable-next-line security/detect-object-injection
-    return GROUPS[gid]
+    if (!Object.values(GROUP).includes(gid)) throw errBadGroup(gid)
+    return GROUPS[`${gid}`]
 }

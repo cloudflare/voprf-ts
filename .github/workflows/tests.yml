@@ -10,11 +10,12 @@ on:
 
 jobs:
   testing:
-    name: Testing on Node v${{ matrix.node }}
+    name: Testing on Node v${{ matrix.node }} / CRYPTO_PROVIDER_ARG_REQUIRED=${{ matrix.crypto_arg_required }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [20, 18]
+        node: [ 20, 18 ]
+        crypto_arg_required: [ true, false ]
     steps:
       - name: Checking out
         uses: actions/checkout@v3
@@ -28,14 +29,24 @@ jobs:
       - name: Install NPM dependencies
         run: npm ci
 
+      - name: Modify buildSettings.ts for testing
+        run: sed -i "s/CRYPTO_PROVIDER_ARG_REQUIRED = false/CRYPTO_PROVIDER_ARG_REQUIRED = ${{ matrix.crypto_arg_required }}/g" src/buildSettings.ts
+
       - name: Check lint
         run: npm run lint
 
       - name: Check build
         run: npm run build
 
+      - name: Check build others
+        if: matrix.crypto_arg_required == false
+        run: npm run build:others
+
       - name: Run NPM tests
         run: npm test
 
       - name: Check examples
-        run: npm run examples
+        if: matrix.crypto_arg_required == false
+        run: |
+          npm run examples
+          npm run examples:facade

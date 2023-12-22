@@ -9,7 +9,7 @@ import {
     VOPRFServer,
     generatePublicKey,
     randomPrivateKey
-} from '../src/index.js'
+} from '@cloudflare/voprf-ts'
 
 // Example: VOPRF mode with the P384-SHA384 suite.
 export async function voprfExample() {

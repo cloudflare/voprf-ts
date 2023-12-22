@@ -4,29 +4,48 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import Benchmark from 'benchmark'
-import { benchGroup } from './group.bench.js'
-import { benchOPRF } from './oprf.bench.js'
 import { webcrypto } from 'node:crypto'
 
+import { benchGroup } from './group.bench.js'
+import { benchOPRF } from './oprf.bench.js'
+import { getCryptoProviders } from './testProviders.js'
+
+import { type CryptoProvider } from '../src/index.js'
+
 if (typeof crypto === 'undefined') {
-    global.crypto = webcrypto as unknown as Crypto
+    Object.assign(global, { crypto: webcrypto })
 }
 
-async function bench() {
+async function bench(provider: CryptoProvider) {
     const bs = new Benchmark.Suite()
+    await benchOPRF(provider, bs)
+    await benchGroup(provider, bs)
 
-    await benchOPRF(bs)
-    await benchGroup(bs)
+    return new Promise<unknown>((resolve, reject) => {
+        bs.on('cycle', (ev: Benchmark.Event) => {
+            console.log(`${provider.id}/${String(ev.target)}`)
+        })
+        bs.on('error', (event: Benchmark.Event) => {
+            bs.abort()
+            reject(new Error(`error: ${String(event.target)}`))
+        })
+        bs.on('complete', resolve)
 
-    bs.on('cycle', (ev: Benchmark.Event) => {
-        console.log(String(ev.target))
+        bs.run({ async: false })
     })
-
-    bs.run({ async: false })
 }
 
-bench().catch((e: Error) => {
-    console.log(`Error: ${e.message}`)
-    console.log(`Stack: ${e.stack}`)
-    process.exit(1)
-})
+async function runBenchmarksSerially() {
+    try {
+        for (const provider of getCryptoProviders()) {
+            await bench(provider)
+        }
+    } catch (_e) {
+        const e = _e as Error
+        console.log(`Error: ${e.message}`)
+        console.log(`Stack: ${e.stack}`)
+        process.exit(1)
+    }
+}
+
+void runBenchmarksSerially()
