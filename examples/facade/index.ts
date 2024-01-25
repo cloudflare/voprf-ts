@@ -1,11 +1,11 @@
-import { CryptoNoble } from '@cloudflare/voprf-ts/crypto-noble'
+import { CryptoNoble } from '../../src/cryptoNoble.js'
 // You may want to do this when 3rd party dependencies use voprf-ts
 // import { Oprf as OprfCore } from '@cloudflare/voprf-ts'
 // OprfCore.Crypto = CryptoNoble
 
 import { webcrypto } from 'node:crypto'
 
-import { Oprf, type OprfApi, type SuiteID } from '@cloudflare/voprf-ts/facade'
+import { Oprf, type OprfApi, type SuiteID } from '../../src/facade/index.js'
 
 export async function facadeOprfExample(Oprf: OprfApi, suite: SuiteID = Oprf.Suite.P521_SHA512) {
     // Setup: Create client and server.
@@ -145,7 +145,7 @@ export async function facadeVoprfExample(Oprf: OprfApi, suite: SuiteID = Oprf.Su
     console.log(`Example VOPRF - SuiteID: ${mode.suite}`)
     console.log(`CryptoProvider: ${mode.crypto.id}`)
     console.log(`input  (${input.length} bytes): ${input}`)
-    console.log(`output (${output.length} bytes): ${Buffer.from(output).toString('hex')}\n`)
+    console.log(`output (${output.length} bytes): ${Buffer.from(output).toString('hex')}`)
     console.log(`verified: ${verified}\n`)
 }
 
