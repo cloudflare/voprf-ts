@@ -9,9 +9,8 @@ export type ModeVoprf = typeof MODE.VOPRF
 export type ModeID = ModeOprf | ModeVoprf | ModePoprf
 
 export type HasSerialize<T> = { serialize(): T }
-export type Serialized<T extends HasSerialize<unknown>> = T extends HasSerialize<infer R>
-    ? R
-    : never
+export type Serialized<T extends HasSerialize<unknown>> =
+    T extends HasSerialize<infer R> ? R : never
 
 export interface Modal<M extends ModeID> {
     readonly mode: M
