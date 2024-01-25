@@ -64,7 +64,6 @@
     "jest": "29.7.0",
     "prettier": "3.0.3",
     "sjcl": "1.0.8",
-    "tsx": "^3.13.0",
     "typescript": "5.2.2"
   },
   "scripts": {
@@ -77,10 +76,10 @@
     "test:esm": "npm run test:build && node --experimental-vm-modules node_modules/.bin/jest --ci --selectProjects esm --coverageDirectory coverage/esm",
     "test:cjs": "npm run test:build && node node_modules/.bin/jest --ci --selectProjects cjs --coverageDirectory coverage/cjs",
     "test:build": "tsc -b test test/tsconfig.cjs.json",
-    "examples": "npm run build && tsx examples/index.ts",
-    "examples:facade": "npm run build && tsx examples/facade/index.ts",
+    "examples": "tsc -b examples && node --experimental-vm-modules ./lib/esm/examples/index.js",
+    "examples:facade": "tsc -b examples && node --experimental-vm-modules ./lib/esm/examples/facade/index.js",
     "lint": "eslint .",
-    "bench": "npm run build && tsx bench/index.ts",
+    "bench": "tsc -b bench && node --experimental-vm-modules ./lib/esm/bench/index.js",
     "format": "prettier './(src|test|bench|examples)/**/!(*.d).ts' --write",
     "format:json": "prettier './**/*.json' '!./node_modules/**' '!./package-lock.json' '!./test/testdata/allVectors_v20.json' --write"
   },

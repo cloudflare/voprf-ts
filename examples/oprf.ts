@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { OPRFClient, OPRFServer, Oprf, randomPrivateKey } from '@cloudflare/voprf-ts'
+import { OPRFClient, OPRFServer, Oprf, randomPrivateKey } from '../src/index.js'
 
 // Example: OPRF mode with the P521-SHA512 suite.
 export async function oprfExample() {
