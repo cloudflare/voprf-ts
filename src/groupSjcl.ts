@@ -69,7 +69,7 @@ async function expandXMD(
 
     for (let i = 2; i <= ell; i++) {
         const biInput = joinAll([xor(bi, b0), new Uint8Array([i]), dstPrime])
-        bi = new Uint8Array(await crypto.subtle.digest(hash, biInput)) // eslint-disable-line no-await-in-loop
+        bi = new Uint8Array(await crypto.subtle.digest(hash, biInput))
         pseudo = joinAll([pseudo, bi])
     }
     return pseudo.slice(0, numBytes)

@@ -31,7 +31,7 @@ async function testBadProof(
     suiteID: SuiteID
 ) {
     const badEval = Evaluation.deserialize(suiteID, evaluation.serialize(), crypto)
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
     Object.assign(badEval.proof!, { s: evaluation.proof!.c })
     await expect(client.finalize(finData, badEval)).rejects.toThrow(/proof failed/)
 }
