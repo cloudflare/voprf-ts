@@ -57,7 +57,7 @@ describeCryptoTests(({ provider, supportedSuites }) => {
 
             it('generateKeyPair', async () => {
                 for (let i = 0; i < 64; i++) {
-                    const keys = await generateKeyPair(id, provider) // eslint-disable-line no-await-in-loop
+                    const keys = await generateKeyPair(id, provider)
                     const sk = validatePrivateKey(id, keys.privateKey, provider)
                     const pk = validatePublicKey(id, keys.publicKey, provider)
                     expect(sk).toBe(true)
@@ -69,7 +69,7 @@ describeCryptoTests(({ provider, supportedSuites }) => {
                 const info = new TextEncoder().encode('info used for derivation')
                 for (let i = 0; i < 64; i++) {
                     const seed = crypto.getRandomValues(new Uint8Array(Nsk))
-                    const keys = await deriveKeyPair(Oprf.Mode.OPRF, id, seed, info, provider) // eslint-disable-line no-await-in-loop
+                    const keys = await deriveKeyPair(Oprf.Mode.OPRF, id, seed, info, provider)
                     const sk = validatePrivateKey(id, keys.privateKey, provider)
                     const pk = validatePublicKey(id, keys.publicKey, provider)
                     expect(sk).toBe(true)
