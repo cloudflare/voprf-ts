@@ -1,12 +1,5 @@
 {
     "extends": "../tsconfig.json",
-    "compilerOptions": {
-        "paths": {
-            "@cloudflare/voprf-ts": ["../src/index.js"],
-            "@cloudflare/voprf-ts/crypto-noble": ["../src/cryptoNoble.js"],
-            "@cloudflare/voprf-ts/facade": ["../src/facade/index.js"]
-        }
-    },
     "include": ["."],
     "references": [
         {

@@ -5,7 +5,8 @@
 
 import { DLEQProver } from './dleq.js'
 import type { Elt, Scalar } from './groupTypes.js'
-import { Evaluation, EvaluationRequest, type ModeID, Oprf, type SuiteID } from './oprf.js'
+import type { EvaluationRequest, ModeID, SuiteID } from './oprf.js'
+import { Evaluation, Oprf } from './oprf.js'
 import { ctEqual, zip } from './util.js'
 import type { CryptoProviderArg } from './cryptoImpl.js'
 

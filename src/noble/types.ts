@@ -3,11 +3,11 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import { Field } from '@noble/curves/abstract/modular'
+import type { Field } from '@noble/curves/abstract/modular'
 import type { CHash } from '@noble/hashes/utils'
-import * as p256 from '@noble/curves/p256'
-import * as ed25519 from '@noble/curves/ed25519'
-import * as ed448 from '@noble/curves/ed448'
+import type * as p256 from '@noble/curves/p256'
+import type * as ed25519 from '@noble/curves/ed25519'
+import type * as ed448 from '@noble/curves/ed448'
 import type { Hex } from '@noble/curves/abstract/utils'
 
 import type { HashID } from '../cryptoTypes.js'

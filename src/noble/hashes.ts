@@ -5,8 +5,10 @@
 
 import { sha256 } from '@noble/hashes/sha256'
 import { sha384, sha512 } from '@noble/hashes/sha512'
-import { type CHash, Hash, wrapConstructor } from '@noble/hashes/utils'
-import { Keccak, shake256 } from '@noble/hashes/sha3'
+import type { Hash, CHash } from '@noble/hashes/utils'
+import { wrapConstructor } from '@noble/hashes/utils'
+import type { Keccak } from '@noble/hashes/sha3'
+import { shake256 } from '@noble/hashes/sha3'
 import type { HashID } from '../cryptoTypes.js'
 
 export const shake256_512 = wrapConstructor<Hash<Keccak>>(() => shake256.create({ dkLen: 64 }))

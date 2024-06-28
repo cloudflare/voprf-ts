@@ -4,14 +4,8 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import type { Elt, Scalar } from './groupTypes.js'
-import {
-    Evaluation,
-    EvaluationRequest,
-    FinalizeData,
-    type ModeID,
-    Oprf,
-    type SuiteID
-} from './oprf.js'
+import type { Evaluation, ModeID, SuiteID } from './oprf.js'
+import { EvaluationRequest, FinalizeData, Oprf } from './oprf.js'
 
 import { zip } from './util.js'
 import type { CryptoProviderArg } from './cryptoImpl.js'
