@@ -17,7 +17,7 @@ import {
     randomPrivateKey
 } from '../src/index.js'
 
-import Benchmark from 'benchmark'
+import type Benchmark from 'benchmark'
 
 function asyncFn(call: CallableFunction) {
     return {

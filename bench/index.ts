@@ -10,7 +10,7 @@ import { benchGroup } from './group.bench.js'
 import { benchOPRF } from './oprf.bench.js'
 import { getCryptoProviders } from './testProviders.js'
 
-import { type CryptoProvider } from '../src/index.js'
+import type { CryptoProvider } from '../src/cryptoTypes.js'
 
 if (typeof crypto === 'undefined') {
     Object.assign(global, { crypto: webcrypto })

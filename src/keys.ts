@@ -5,7 +5,7 @@
 
 import { type ModeID, Oprf, type SuiteID } from './oprf.js'
 import { joinAll, toU16LenPrefix } from './util.js'
-import { type Scalar } from './groupTypes.js'
+import type { Scalar } from './groupTypes.js'
 import { type CryptoProviderArg, getSuiteGroup } from './cryptoImpl.js'
 
 export function getKeySizes(id: SuiteID, ...arg: CryptoProviderArg): { Nsk: number; Npk: number } {

@@ -3,8 +3,8 @@
 // Licensed under the BSD-3-Clause license found in the LICENSE file or
 // at https://opensource.org/licenses/BSD-3-Clause
 
-import Benchmark from 'benchmark'
-import { type CryptoProvider } from '@cloudflare/voprf-ts'
+import type Benchmark from 'benchmark'
+import type { CryptoProvider } from '../src/cryptoTypes.js'
 
 function asyncFn(call: CallableFunction) {
     return {

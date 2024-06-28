@@ -2,7 +2,8 @@
     "root": true,
     "parserOptions": {
         "ecmaVersion": 2020,
-        "sourceType": "module"
+        "sourceType": "module",
+        "project": true
     },
     "extends": [
         "eslint:recommended",
@@ -76,15 +77,15 @@
                     "error",
                     "never"
                 ],
-                "@typescript-eslint/no-namespace": [
-                    "warn"
-                ],
+                "@typescript-eslint/no-namespace": "warn",
                 "@typescript-eslint/no-unused-vars": [
                     "error",
                     {
                         "argsIgnorePattern": "^_"
                     }
-                ]
+                ],
+                "@typescript-eslint/consistent-type-imports": "error",
+                "@typescript-eslint/consistent-type-exports": "error"
             }
         }
     ]
