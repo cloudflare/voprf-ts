@@ -5,16 +5,18 @@
 
 import { jest } from '@jest/globals'
 
-import { type GroupID, OPRFClient, OPRFServer, randomPrivateKey } from '../src/index.js'
+import type { GroupID } from '../src/index.js'
+import { OPRFClient, OPRFServer, randomPrivateKey } from '../src/index.js'
 import { describeCryptoTests } from './describeCryptoTests.js'
-
-const { sign, importKey } = crypto.subtle
 
 interface CryptoKeyWithBuffer extends CryptoKey {
     keyData: ArrayBuffer
 }
 
-function mockImportKey(...x: Parameters<typeof importKey>): ReturnType<typeof importKey> {
+type ImportKeySubtle = typeof crypto.subtle.importKey
+type SignSubtle = typeof crypto.subtle.sign
+
+function mockImportKey(...x: Parameters<ImportKeySubtle>): ReturnType<ImportKeySubtle> {
     const [format, keyData, algorithm, extractable] = x
     if (format === 'raw' && (algorithm as EcKeyImportParams).name === 'OPRF') {
         return Promise.resolve({
@@ -31,7 +33,7 @@ function mockImportKey(...x: Parameters<typeof importKey>): ReturnType<typeof im
 }
 
 describeCryptoTests(({ provider, supportedSuites }) => {
-    function mockSign(...x: Parameters<typeof sign>): ReturnType<typeof sign> {
+    function mockSign(...x: Parameters<SignSubtle>): ReturnType<SignSubtle> {
         const [algorithm, key, data] = x
         if (algorithm === 'OPRF') {
             const algorithmName = (key.algorithm as EcdsaParams).name
@@ -52,7 +54,7 @@ describeCryptoTests(({ provider, supportedSuites }) => {
             jest.spyOn(crypto.subtle, 'sign').mockImplementation(mockSign)
         })
 
-        it(`${id}`, async () => {
+        it(`id-${id}`, async () => {
             const te = new TextEncoder()
             const privateKey = await randomPrivateKey(id, provider)
             const server = new OPRFServer(id, privateKey, provider)

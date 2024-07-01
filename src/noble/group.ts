@@ -28,8 +28,14 @@ export class GroupNb implements Group {
 
     static readonly #cache: GroupCache = {}
 
-    static get(gid: GroupID) {
-        return (this.#cache[`${gid}`] ??= new this(gid))
+    static get(gid: GroupID): Group {
+        let { [gid]: group } = this.#cache
+        if (!group) {
+            group = new this(gid)
+            Object.assign(this.#cache, { gid: group })
+        }
+
+        return group
     }
 
     public readonly params: GroupParams

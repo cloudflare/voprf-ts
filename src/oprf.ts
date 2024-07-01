@@ -186,7 +186,7 @@ export class Evaluation {
         if (this.mode !== e.mode || (this.proof && !e.proof) || (!this.proof && e.proof)) {
             return false
         }
-        let res = this.evaluated.every((x, i) => x.isEqual(e.evaluated[i as number]))
+        let res = this.evaluated.every((x, i) => x.isEqual(e.evaluated[i]))
         if (this.proof && e.proof) {
             res &&= this.proof.isEqual(e.proof)
         }
@@ -223,7 +223,7 @@ export class EvaluationRequest {
     }
 
     isEqual(e: EvaluationRequest): boolean {
-        return this.blinded.every((x, i) => x.isEqual(e.blinded[i as number]))
+        return this.blinded.every((x, i) => x.isEqual(e.blinded[i]))
     }
 
     static deserialize(
@@ -254,8 +254,8 @@ export class FinalizeData {
 
     isEqual(f: FinalizeData): boolean {
         return (
-            this.inputs.every((x, i) => x.toString() === f.inputs[i as number].toString()) &&
-            this.blinds.every((x, i) => x.isEqual(f.blinds[i as number])) &&
+            this.inputs.every((x, i) => x.toString() === f.inputs[i].toString()) &&
+            this.blinds.every((x, i) => x.isEqual(f.blinds[i])) &&
             this.evalReq.isEqual(f.evalReq)
         )
     }

@@ -36,7 +36,7 @@ describeCryptoTests(({ provider, supportedGroups }) => {
         let proofBatched: DLEQProof
         let list: Array<[Elt, Elt]>
 
-        describe.each([...Array(5).keys()])(`${groupName}`, (i: number) => {
+        describe.each([...Array(5).keys()])(`group-${groupName}`, (i: number) => {
             beforeAll(async () => {
                 k = await group.randomScalar()
                 P = group.mulGen(await group.randomScalar())
@@ -76,7 +76,7 @@ describeCryptoTests(({ provider, supportedGroups }) => {
                 expect(await Victor.verify([P, kP], [Q, kQ], badProof)).toBe(false)
             })
 
-            it(`serde/${i}`, async () => {
+            it(`serde/${i}`, () => {
                 expect(serdeClass(DLEQProof, proof, id, provider)).toBe(true)
                 expect(serdeClass(DLEQProof, proofBatched, id, provider)).toBe(true)
             })
