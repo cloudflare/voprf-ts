@@ -150,16 +150,23 @@ export async function facadeVoprfExample(Oprf: OprfApi, suite: SuiteID = Oprf.Su
 }
 
 async function main() {
-    if (typeof crypto === 'undefined') {
-        Object.assign(global, { crypto: webcrypto })
-    }
-    await facadeOprfExample(Oprf)
-    await facadeVoprfExample(Oprf)
+    try {
+        if (typeof crypto === 'undefined') {
+            Object.assign(global, { crypto: webcrypto })
+        }
+        await facadeOprfExample(Oprf)
+        await facadeVoprfExample(Oprf)
 
-    // This suite requires the noble crypto provider as sjcl doesn't support
-    // ristretto.
-    const OprfNoble = Oprf.withConfig({ crypto: CryptoNoble })
-    await facadePoprfExample(OprfNoble, Oprf.Suite.RISTRETTO255_SHA512)
+        // This suite requires the noble crypto provider as sjcl doesn't support
+        // ristretto.
+        const OprfNoble = Oprf.withConfig({ crypto: CryptoNoble })
+        await facadePoprfExample(OprfNoble, Oprf.Suite.RISTRETTO255_SHA512)
+    } catch (_e: unknown) {
+        const e = _e as Error
+        console.log(`Error: ${e.message}`)
+        console.log(`Stack: ${e.stack}`)
+        process.exit(1)
+    }
 }
 
-main().catch(console.error)
+void main()

@@ -30,15 +30,17 @@ async function testBadProof(
     crypto: CryptoProvider,
     suiteID: SuiteID
 ) {
+    if (!evaluation.proof) throw new Error('no evaluation exists')
+
     const badEval = Evaluation.deserialize(suiteID, evaluation.serialize(), crypto)
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    Object.assign(badEval.proof!, { s: evaluation.proof!.c })
+
+    Object.assign(badEval, { proof: { s: evaluation.proof.c, c: evaluation.proof.c } })
     await expect(client.finalize(finData, badEval)).rejects.toThrow(/proof failed/)
 }
 
 describeCryptoTests(({ provider, supportedSuites }) => {
     describe.each(Object.entries(Oprf.Mode))('protocol', (modeName, mode) => {
-        describe.each(supportedSuites)(`${modeName}`, (id) => {
+        describe.each(supportedSuites)(`mode-${modeName}`, (id) => {
             let server: OPRFServer | VOPRFServer | POPRFServer
             let client: OPRFClient | VOPRFClient | POPRFClient
 
@@ -62,7 +64,7 @@ describeCryptoTests(({ provider, supportedSuites }) => {
                 }
             })
 
-            it(`${id}`, async () => {
+            it(`id-${id}`, async () => {
                 // Client                                       Server
                 // ====================================================
                 // Client

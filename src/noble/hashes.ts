@@ -21,7 +21,9 @@ const HASHES: Record<HashID, CHash> = {
 }
 
 export function hashSync(hashID: HashID, input: Uint8Array) {
-    const fn = HASHES[`${hashID}`]
-    if (!fn) throw new Error(`Unknown hashID=${hashID}`)
+    if (!(hashID in HASHES)) {
+        throw new Error(`Unknown hashID=${hashID}`)
+    }
+    const { [hashID]: fn } = HASHES
     return fn(input)
 }

@@ -41,7 +41,7 @@ export class EltNb implements Elt {
     neg(): EltNb {
         if (typeof this.p.negate === 'undefined') {
             // https://github.com/paulmillr/noble-curves/issues/84
-            throw new Error(`Point doesn't implement negate: ${this.Point}`)
+            throw new Error(`Point doesn't implement negate`)
         } else {
             return new EltNb(this.g, this.p.negate())
         }
@@ -109,7 +109,7 @@ export class EltNb implements Elt {
             case isEdwards && len !== size.standard:
                 throw errDeserialization(EltNb)
             case len === 1 && tag === 0x0:
-                return g.identity() as EltNb
+                return g.identity()
             case len === size.compressed && (tag === 0x02 || tag === 0x03):
             case len === size.standard && tag === 0x04:
                 return EltNb.deser(g, bytes)

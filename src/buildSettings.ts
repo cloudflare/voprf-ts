@@ -6,7 +6,7 @@ import { CryptoSjcl } from './cryptoSjcl.js'
 // tests are properly passing around the provider object everywhere.
 // We can set it to `false` to not require the arg and let it
 // default to `DEFAULT_CRYPTO_PROVIDER`
-export const CRYPTO_PROVIDER_ARG_REQUIRED = false
+export const CRYPTO_PROVIDER_ARG_REQUIRED: boolean = false
 
 // Of course, this means that using the api with a non default provider
 // is not very nice, but it does allow the facade api to avoid the

@@ -35,7 +35,3 @@ export function serdesEquals<
     const deser = deserializer.deserialize(ser)
     return t.isEqual(deser)
 }
-
-export function zip<T>(x: T[], y: T[]): Array<[T, T]> {
-    return x.map<[T, T]>((xi, i) => [xi, y[i as number]])
-}

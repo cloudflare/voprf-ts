@@ -62,5 +62,6 @@ const GROUPS: Record<GroupID, GroupParams> = {
 
 export function getParams(gid: GroupID) {
     if (!Object.values(GROUP).includes(gid)) throw errBadGroup(gid)
-    return GROUPS[`${gid}`]
+    const { [gid]: params } = GROUPS
+    return params
 }

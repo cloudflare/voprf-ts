@@ -19,10 +19,12 @@ export function describeGroupTests(declare: (group: GroupCons) => void) {
         beforeAll(() => {
             Oprf.Crypto = provider
         })
+
         // Will run before other tests
         beforeEach(() => {
             Oprf.Crypto = provider
         })
+
         Oprf.Crypto = provider
         declare(provider.Group)
     })

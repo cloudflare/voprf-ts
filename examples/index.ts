@@ -18,7 +18,8 @@ async function examples() {
     await poprfExample()
 }
 
-examples().catch((e: Error) => {
+examples().catch((_e: unknown) => {
+    const e = _e as Error
     console.log(`Error: ${e.message}`)
     console.log(`Stack: ${e.stack}`)
     process.exit(1)
