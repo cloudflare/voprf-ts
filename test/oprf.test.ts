@@ -33,7 +33,8 @@ async function testBadProof(
     if (!evaluation.proof) throw new Error('no evaluation exists')
 
     const badEval = Evaluation.deserialize(suiteID, evaluation.serialize(), crypto)
-    Object.assign(badEval, { proof: { s: evaluation.proof.c } })
+
+    Object.assign(badEval, { proof: { s: evaluation.proof.c, c: evaluation.proof.c } })
     await expect(client.finalize(finData, badEval)).rejects.toThrow(/proof failed/)
 }
 
