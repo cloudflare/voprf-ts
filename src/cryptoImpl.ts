@@ -12,7 +12,7 @@ type RequiredArg = [CryptoProvider]
 export type CryptoProviderArg = typeof REQUIRED extends true ? RequiredArg : OptionalArg
 
 export function getCrypto(arg: CryptoProviderArg) {
-    const [provider] = arg as OptionalArg
+    const [provider] = arg
     if (!provider && REQUIRED) {
         throw new Error(`Undefined crypto arg`)
     }

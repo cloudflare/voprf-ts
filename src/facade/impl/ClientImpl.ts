@@ -15,20 +15,20 @@ export class ClientImpl extends OprfBaseImpl implements Client {
     ) {
         super(...args)
         let wrapped: OPRFClient | VOPRFClient | POPRFClient
-        if (this.mode !== MODE.OPRF && !publicKey) {
-            throw new Error(`public key must be set for VOPRF|POPRF modes`)
-        } else {
-            publicKey = publicKey!
-        }
-
         switch (this.mode) {
             case MODE.OPRF:
                 wrapped = new OPRFClient(this.suite, this.crypto)
                 break
             case MODE.POPRF:
+                if (!publicKey) {
+                    throw new Error(`public key must be set for the POPRF mode`)
+                }
                 wrapped = new POPRFClient(this.suite, publicKey, this.crypto)
                 break
             case MODE.VOPRF:
+                if (!publicKey) {
+                    throw new Error(`public key must be set for the VOPRF mode`)
+                }
                 wrapped = new VOPRFClient(this.suite, publicKey, this.crypto)
                 break
             default:

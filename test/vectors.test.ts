@@ -16,12 +16,12 @@ import {
     VOPRFClient,
     VOPRFServer
 } from '../src/index.js'
+import { zip } from '../src/util.js'
 import { describeCryptoTests } from './describeCryptoTests.js'
 
 // Test vectors taken from reference implementation at https://github.com/cfrg/draft-irtf-cfrg-voprf
 import allVectors from './testdata/allVectors_v20.json'
 import { jest } from '@jest/globals'
-import { zip } from './util.js'
 
 function fromHex(x: string): Uint8Array {
     return Uint8Array.from(Buffer.from(x, 'hex'))
@@ -75,11 +75,14 @@ describeCryptoTests(({ provider, supportedSuites: supported }) => {
         const txtMode = Object.entries(Oprf.Mode)[mode as number][0]
 
         const id = testVector.identifier as SuiteID
-        const isSupported = supported.find((v) => v[0] === id)
-        const describeOrSkip = isSupported ? describe : describe.skip
+        const index = supported.findIndex((v) => v[0] === id)
+        const describeOrSkip = index >= 0 ? describe : describe.skip
 
         describeOrSkip(`${txtMode}, ${id}`, () => {
-            const suiteParams = isSupported!
+            const suiteParams = supported.at(index)
+            if (!suiteParams) {
+                return
+            }
 
             let skSm: Uint8Array
             let server: OPRFServer | VOPRFServer | POPRFServer
@@ -136,7 +139,7 @@ describeCryptoTests(({ provider, supportedSuites: supported }) => {
 
                     let info: Uint8Array | undefined = undefined
                     if (testVector.mode === Oprf.Mode.POPRF) {
-                        info = fromHex(vi.Info!)
+                        info = fromHex(vi.Info ?? '')
                     }
 
                     const input = fromHexList(vi.Input)

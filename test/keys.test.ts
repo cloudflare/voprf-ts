@@ -15,7 +15,7 @@ import { describeCryptoTests } from './describeCryptoTests.js'
 
 describeCryptoTests(({ provider, supportedSuites }) => {
     describe.each(supportedSuites)('oprf-keys', (id, groupID) => {
-        describe(`${id}`, () => {
+        describe(`id-${id}`, () => {
             const { Nsk, Npk } = getKeySizes(id, provider)
             const gg = provider.Group.get(groupID)
 

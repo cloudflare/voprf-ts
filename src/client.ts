@@ -4,7 +4,7 @@
 // at https://opensource.org/licenses/BSD-3-Clause
 
 import type { Elt, Scalar } from './groupTypes.js'
-import type { Evaluation, ModeID, SuiteID } from './oprf.js'
+import type { Evaluation, SuiteID } from './oprf.js'
 import { EvaluationRequest, FinalizeData, Oprf } from './oprf.js'
 
 import { zip } from './util.js'
@@ -12,10 +12,6 @@ import type { CryptoProviderArg } from './cryptoImpl.js'
 import { DLEQVerifier } from './dleq.js'
 
 class baseClient extends Oprf {
-    constructor(mode: ModeID, suite: SuiteID, ...arg: CryptoProviderArg) {
-        super(mode, suite, ...arg)
-    }
-
     randomBlinder(): Promise<Scalar> {
         return this.group.randomScalar()
     }
@@ -52,10 +48,10 @@ class baseClient extends Oprf {
 
         const outputList = []
         for (let i = 0; i < n; i++) {
-            const blindInv = finData.blinds[i as number].inv()
-            const N = evaluation.evaluated[i as number].mul(blindInv)
+            const blindInv = finData.blinds[i].inv()
+            const N = evaluation.evaluated[i].mul(blindInv)
             const unblinded = N.serialize()
-            outputList.push(await this.coreFinalize(finData.inputs[i as number], unblinded, info))
+            outputList.push(await this.coreFinalize(finData.inputs[i], unblinded, info))
         }
         return outputList
     }
