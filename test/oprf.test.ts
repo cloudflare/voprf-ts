@@ -21,7 +21,7 @@ import {
 } from '../src/index.js'
 import { describeCryptoTests } from './describeCryptoTests.js'
 
-import { serdeClass } from './util.js'
+import { expectToBeDefined, serdeClass } from './util.js'
 
 async function testBadProof(
     client: OPRFClient,
@@ -30,10 +30,9 @@ async function testBadProof(
     crypto: CryptoProvider,
     suiteID: SuiteID
 ) {
-    if (!evaluation.proof) throw new Error('no evaluation exists')
-
     const badEval = Evaluation.deserialize(suiteID, evaluation.serialize(), crypto)
 
+    expectToBeDefined(evaluation.proof)
     Object.assign(badEval, { proof: { s: evaluation.proof.c, c: evaluation.proof.c } })
     await expect(client.finalize(finData, badEval)).rejects.toThrow(/proof failed/)
 }

@@ -22,6 +22,7 @@ import { describeCryptoTests } from './describeCryptoTests.js'
 // Test vectors taken from reference implementation at https://github.com/cfrg/draft-irtf-cfrg-voprf
 import allVectors from './testdata/allVectors_v20.json'
 import { jest } from '@jest/globals'
+import { expectToBeDefined } from './util.js'
 
 function fromHex(x: string): Uint8Array {
     return Uint8Array.from(Buffer.from(x, 'hex'))
@@ -80,9 +81,7 @@ describeCryptoTests(({ provider, supportedSuites: supported }) => {
 
         describeOrSkip(`${txtMode}, ${id}`, () => {
             const suiteParams = supported.at(index)
-            if (!suiteParams) {
-                return
-            }
+            expectToBeDefined(suiteParams)
 
             let skSm: Uint8Array
             let server: OPRFServer | VOPRFServer | POPRFServer
@@ -139,7 +138,8 @@ describeCryptoTests(({ provider, supportedSuites: supported }) => {
 
                     let info: Uint8Array | undefined = undefined
                     if (testVector.mode === Oprf.Mode.POPRF) {
-                        info = fromHex(vi.Info ?? '')
+                        expectToBeDefined(vi.Info)
+                        info = fromHex(vi.Info)
                     }
 
                     const input = fromHexList(vi.Input)
