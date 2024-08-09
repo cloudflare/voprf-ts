@@ -1,9 +1,6 @@
 {
     "extends": "../tsconfig.cjs.json",
-    "include": [
-        ".",
-        "testdata/*.json"
-    ],
+    "include": [".", "testdata/*.json"],
     "compilerOptions": {
         "resolveJsonModule": true
     },
