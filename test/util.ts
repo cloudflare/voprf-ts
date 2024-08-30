@@ -5,16 +5,17 @@
 
 import type { CryptoProviderArg } from '../src/cryptoImpl.js'
 
+type ClassDeserializer<T, U> = {
+    deserialize: (u: U, b: Uint8Array, ...arg: CryptoProviderArg) => T
+}
+
 export function serdeClass<
-    U,
-    K extends {
-        deserialize: (u: U, b: Uint8Array, ...arg: CryptoProviderArg) => T
-    },
     T extends {
         serialize: () => Uint8Array
         isEqual: (t: T) => boolean
-    }
->(k: K, t: T, u: U, ...arg: CryptoProviderArg): boolean {
+    },
+    U
+>(k: ClassDeserializer<T, U>, t: T, u: U, ...arg: CryptoProviderArg): boolean {
     const ser = t.serialize()
     const deser = k.deserialize(u, ser, ...arg)
     return t.isEqual(deser)
