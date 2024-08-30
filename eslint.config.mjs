@@ -1,6 +1,6 @@
 import eslintJS from '@eslint/js'
 import eslintTS from 'typescript-eslint'
-// import pluginPrettier from 'eslint-plugin-prettier/recommended'
+import pluginPrettier from 'eslint-plugin-prettier/recommended'
 import pluginSecurity from 'eslint-plugin-security'
 import pluginJest from 'eslint-plugin-jest'
 
@@ -44,5 +44,5 @@ export default eslintTS.config(
             '@typescript-eslint/restrict-template-expressions': 'off'
         }
     },
-    // pluginPrettier
+    pluginPrettier
 )
