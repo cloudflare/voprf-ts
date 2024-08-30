@@ -132,7 +132,7 @@ export interface Mode<M extends ModeID = ModeID> extends Modal<M>, UsesCrypto {
     makeClient(...publicKey: PublicKey<M>): Client<M>
 }
 
-export interface MakeModeParams<M extends ModeID> extends Modal<M> {}
+export type MakeModeParams<M extends ModeID> = Modal<M>
 
 export interface OprfApi {
     readonly Suite: typeof SUITE

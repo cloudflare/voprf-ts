@@ -22,7 +22,7 @@ export function validatePrivateKey(
         const gg = getSuiteGroup(id, arg)
         const s = gg.desScalar(privateKey)
         return !s.isZero()
-    } catch (_) {
+    } catch {
         return false
     }
 }
@@ -36,7 +36,7 @@ export function validatePublicKey(
         const gg = getSuiteGroup(id, arg)
         const P = gg.desElt(publicKey)
         return !P.isIdentity()
-    } catch (_) {
+    } catch {
         return false
     }
 }
