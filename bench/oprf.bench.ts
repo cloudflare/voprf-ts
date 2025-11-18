@@ -19,7 +19,7 @@ import {
 
 import type Benchmark from 'benchmark'
 
-function asyncFn(call: CallableFunction) {
+function asyncFn(call: () => Promise<unknown>) {
     return {
         defer: true,
         async fn(df: Benchmark.Deferred) {

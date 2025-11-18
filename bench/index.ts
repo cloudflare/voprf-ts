@@ -23,11 +23,11 @@ async function bench(provider: CryptoProvider) {
 
     return new Promise<unknown>((resolve, reject) => {
         bs.on('cycle', (ev: Benchmark.Event) => {
-            console.log(`${provider.id}/${String(ev.target)}`)
+            console.log(`${provider.id}/${String(ev.target.name)}`)
         })
         bs.on('error', (event: Benchmark.Event) => {
             bs.abort()
-            reject(new Error(`error: ${String(event.target)}`))
+            reject(new Error(`error: ${String(event.target.name)}`))
         })
         bs.on('complete', resolve)
 

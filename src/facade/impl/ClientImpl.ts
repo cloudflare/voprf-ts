@@ -38,11 +38,11 @@ export class ClientImpl extends OprfBaseImpl implements Client {
             const [finData, evalReq] = await wrapped.blind(inputs)
             return [finData, this.codec.encodeEvaluationRequest(evalReq)]
         }
-        this.finalize = (finData, evaluation, ...info) => {
+        this.finalize = (finData, evaluation, info) => {
             return wrapped.finalize(
                 this.mapFinalizationData(finData),
                 this.codec.decodeEvaluation({ mode: this.mode, ...evaluation }),
-                ...info
+                info as Uint8Array<ArrayBuffer>
             )
         }
         this.spyHandle = { blinds: wrapped }
