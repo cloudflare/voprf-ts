@@ -28,10 +28,10 @@ export class ServerImpl extends OprfBaseImpl implements Server {
             dleqProver: wrapped['prover']
         }
         this.verifyFinalize = wrapped.verifyFinalize.bind(wrapped)
-        this.blindEvaluate = async (req, ...info) => {
+        this.blindEvaluate = async (req, info) => {
             const internal = await wrapped.blindEvaluate(
                 this.codec.decodeEvaluationRequest(req),
-                ...info
+                info as Uint8Array<ArrayBuffer>
             )
             return this.codec.encodeEvaluation(internal)
         }

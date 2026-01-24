@@ -6,7 +6,7 @@
 import type Benchmark from 'benchmark'
 import type { CryptoProvider } from '../src/cryptoTypes.js'
 
-function asyncFn(call: CallableFunction) {
+function asyncFn(call: () => Promise<unknown>) {
     return {
         defer: true,
         async fn(df: Benchmark.Deferred) {

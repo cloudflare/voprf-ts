@@ -5,7 +5,7 @@
 
 import type { Deserializer, Group, GroupID } from './groupTypes.js'
 
-export function joinAll(a: Uint8Array[]): Uint8Array {
+export function joinAll(a: Uint8Array[]): Uint8Array<ArrayBuffer> {
     let size = 0
     for (const ai of a) {
         size += ai.length
@@ -26,7 +26,7 @@ export function xor(a: Uint8Array, b: Uint8Array): Uint8Array {
     const n = a.length
     const c = new Uint8Array(n)
     for (let i = 0; i < n; i++) {
-        c[i] = a[i] ^ b[i]
+        c[i | 0] = a[i | 0] ^ b[i | 0]
     }
     return c
 }
@@ -38,13 +38,13 @@ export function ctEqual(a: Uint8Array, b: Uint8Array): boolean {
     const n = a.length
     let c = 0
     for (let i = 0; i < n; i++) {
-        c |= a[i] ^ b[i]
+        c |= a[i | 0] ^ b[i | 0]
     }
     return c === 0
 }
 
 export function zip<T>(x: T[], y: T[]): Array<[T, T]> {
-    return x.map<[T, T]>((xi, i) => [xi, y[i]])
+    return x.map<[T, T]>((xi, i) => [xi, y[i | 0]])
 }
 
 export function to16bits(n: number): Uint8Array {
