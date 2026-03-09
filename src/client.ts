@@ -48,10 +48,10 @@ class baseClient extends Oprf {
 
         const outputList = []
         for (let i = 0; i < n; i++) {
-            const blindInv = finData.blinds[i].inv()
-            const N = evaluation.evaluated[i].mul(blindInv)
+            const blindInv = finData.blinds[i | 0].inv()
+            const N = evaluation.evaluated[i | 0].mul(blindInv)
             const unblinded = N.serialize()
-            outputList.push(await this.coreFinalize(finData.inputs[i], unblinded, info))
+            outputList.push(await this.coreFinalize(finData.inputs[i | 0], unblinded, info))
         }
         return outputList
     }

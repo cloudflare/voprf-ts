@@ -24,7 +24,7 @@ import allVectors from './testdata/allVectors_v20.json'
 import { jest } from '@jest/globals'
 import { expectToBeDefined } from './util.js'
 
-function fromHex(x: string): Uint8Array {
+function fromHex(x: string): Uint8Array<ArrayBuffer> {
     return Uint8Array.from(Buffer.from(x, 'hex'))
 }
 
@@ -80,9 +80,6 @@ describeCryptoTests(({ provider, supportedSuites: supported }) => {
         const describeOrSkip = index >= 0 ? describe : describe.skip
 
         describeOrSkip(`${txtMode}, ${id}`, () => {
-            const suiteParams = supported.at(index)
-            expectToBeDefined(suiteParams)
-
             let skSm: Uint8Array
             let server: OPRFServer | VOPRFServer | POPRFServer
             let client: OPRFClient | VOPRFClient | POPRFClient
@@ -116,6 +113,9 @@ describeCryptoTests(({ provider, supportedSuites: supported }) => {
 
             describe.each(testVector.vectors)('vec$#', (vi: SingleVector) => {
                 it('protocol', async () => {
+                    const suiteParams = supported[index | 0]
+                    expectToBeDefined(suiteParams)
+
                     const group = provider.Group.get(suiteParams[1])
 
                     // Creates a mock for randomBlinder method to
@@ -136,7 +136,7 @@ describeCryptoTests(({ provider, supportedSuites: supported }) => {
                         )
                     }
 
-                    let info: Uint8Array | undefined = undefined
+                    let info: Uint8Array<ArrayBuffer> | undefined = undefined
                     if (testVector.mode === Oprf.Mode.POPRF) {
                         expectToBeDefined(vi.Info)
                         info = fromHex(vi.Info)
@@ -156,10 +156,14 @@ describeCryptoTests(({ provider, supportedSuites: supported }) => {
                     const output = await client.finalize(finData, ev, info)
                     expect(toHexListUint8Array(output)).toEqual(vi.Output)
 
-                    const serverCheckOutput = zip(input, output).every(
-                        async (inout) => await server.verifyFinalize(inout[0], inout[1], info)
+                    const serverCheckOutput = await Promise.all(
+                        zip(input, output).map((inout) =>
+                            server.verifyFinalize(inout[0], inout[1], info)
+                        )
                     )
-                    expect(serverCheckOutput).toBe(true)
+                    serverCheckOutput.forEach((x) => {
+                        expect(x).toBe(true)
+                    })
                 })
             })
         })

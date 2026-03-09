@@ -29,7 +29,7 @@ class baseServer extends Oprf {
     private async blindEvaluateWebCrypto(blinded: Elt, key: Uint8Array): Promise<Elt> {
         const crKey = await crypto.subtle.importKey(
             'raw',
-            key,
+            key as Uint8Array<ArrayBuffer>,
             {
                 name: 'OPRF',
                 namedCurve: this.group.id
@@ -39,7 +39,9 @@ class baseServer extends Oprf {
         )
         // webcrypto accepts only compressed points.
         const compressed = blinded.serialize(true)
-        const evalBytes = new Uint8Array(await crypto.subtle.sign('OPRF', crKey, compressed))
+        const evalBytes = new Uint8Array(
+            await crypto.subtle.sign('OPRF', crKey, compressed as Uint8Array<ArrayBuffer>)
+        )
         return this.group.desElt(evalBytes)
     }
 

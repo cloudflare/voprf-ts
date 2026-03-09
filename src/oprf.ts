@@ -172,7 +172,7 @@ export class Evaluation {
     serialize(): Uint8Array {
         let proofBytes = new Uint8Array()
         if (this.proof && (this.mode == Oprf.Mode.VOPRF || this.mode == Oprf.Mode.POPRF)) {
-            proofBytes = this.proof.serialize()
+            proofBytes = this.proof.serialize() as Uint8Array<ArrayBuffer>
         }
 
         return joinAll([
@@ -186,7 +186,7 @@ export class Evaluation {
         if (this.mode !== e.mode || (this.proof && !e.proof) || (!this.proof && e.proof)) {
             return false
         }
-        let res = this.evaluated.every((x, i) => x.isEqual(e.evaluated[i]))
+        let res = this.evaluated.every((x, i) => x.isEqual(e.evaluated[i | 0]))
         if (this.proof && e.proof) {
             res &&= this.proof.isEqual(e.proof)
         }
@@ -223,7 +223,7 @@ export class EvaluationRequest {
     }
 
     isEqual(e: EvaluationRequest): boolean {
-        return this.blinded.every((x, i) => x.isEqual(e.blinded[i]))
+        return this.blinded.every((x, i) => x.isEqual(e.blinded[i | 0]))
     }
 
     static deserialize(
@@ -254,8 +254,8 @@ export class FinalizeData {
 
     isEqual(f: FinalizeData): boolean {
         return (
-            this.inputs.every((x, i) => x.toString() === f.inputs[i].toString()) &&
-            this.blinds.every((x, i) => x.isEqual(f.blinds[i])) &&
+            this.inputs.every((x, i) => x.toString() === f.inputs[i | 0].toString()) &&
+            this.blinds.every((x, i) => x.isEqual(f.blinds[i | 0])) &&
             this.evalReq.isEqual(f.evalReq)
         )
     }
